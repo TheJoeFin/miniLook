@@ -1,8 +1,5 @@
 ﻿using System.Collections.ObjectModel;
-using Azure.Core;
-using Azure.Identity;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Graph;
 using miniLook.Contracts.ViewModels;
 using miniLook.Core.Contracts.Services;
@@ -47,24 +44,24 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
 
-    // User auth token credential
-    private static DeviceCodeCredential? _deviceCodeCredential;
-    // Client configured with user authentication
-    private static GraphServiceClient? _userClient;
+    //// User auth token credential
+    //private static DeviceCodeCredential? _deviceCodeCredential;
+    //// Client configured with user authentication
+    //private static GraphServiceClient? _userClient;
 
-    public static void InitializeGraphForUserAuth(Func<DeviceCodeInfo, CancellationToken, Task> deviceCodePrompt)
-    {
-        var options = new DeviceCodeCredentialOptions
-        {
-            ClientId = Environment.GetEnvironmentVariable("ClientId"),
-            TenantId = "common",
-            DeviceCodeCallback = deviceCodePrompt,
-        };
+    //public static void InitializeGraphForUserAuth(Func<DeviceCodeInfo, CancellationToken, Task> deviceCodePrompt)
+    //{
+    //    var options = new DeviceCodeCredentialOptions
+    //    {
+    //        ClientId = Environment.GetEnvironmentVariable("ClientId"),
+    //        TenantId = "common",
+    //        DeviceCodeCallback = deviceCodePrompt,
+    //    };
 
-        string[] graphUserScopes = ["User.Read", "Mail.Read", "Mail.Send", "Calendars.read"];
+    //    string[] graphUserScopes = ["User.Read", "Mail.Read", "Mail.Send", "Calendars.read"];
 
-        _deviceCodeCredential = new DeviceCodeCredential(options);
+    //    _deviceCodeCredential = new DeviceCodeCredential(options);
 
-        _userClient = new GraphServiceClient(_deviceCodeCredential, graphUserScopes);
-    }
+    //    _userClient = new GraphServiceClient(_deviceCodeCredential, graphUserScopes);
+    //}
 }
