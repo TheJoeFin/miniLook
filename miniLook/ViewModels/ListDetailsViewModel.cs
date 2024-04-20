@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using miniLook.Contracts.ViewModels;
 using miniLook.Core.Contracts.Services;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace miniLook.ViewModels;
 
@@ -22,19 +23,36 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public DispatcherTimer checkTimer = new();
     private GraphServiceClient _graphClient;
+    private DateTimeOffset lastSync = DateTimeOffset.MinValue;
 
     public ListDetailsViewModel(ISampleDataService sampleDataService)
     {
         _sampleDataService = sampleDataService;
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
 
-        checkTimer.Interval = TimeSpan.FromSeconds(5);
+        checkTimer.Interval = TimeSpan.FromSeconds(10);
         checkTimer.Tick += CheckTimer_Tick;
+        checkTimer.Start();
     }
 
-    private void CheckTimer_Tick(object? sender, object e)
+    private async void CheckTimer_Tick(object? sender, object e)
     {
-        throw new NotImplementedException();
+        Debug.WriteLine("Checking for new mail");
+
+        string filter = $"receivedDateTime gt {lastSync:yyyy-MM-ddTHH:mm:ssZ}";
+
+        IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
+            .Request()
+            .Filter(filter)
+            .GetAsync();
+
+        if (messages.Count == 0)
+            return;
+
+        foreach (Message message in messages)
+            SampleItems.Insert(0, message);
+
+        lastSync = DateTimeOffset.UtcNow;
     }
 
     public async void OnNavigatedTo(object parameter)
@@ -51,10 +69,15 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
 
         _graphClient = provider.GetClient();
-        IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages.Request().GetAsync();
+        IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
+            .Request()
+            .Top(100)
+            .GetAsync();
 
         foreach (Message message in messages)
             SampleItems.Add(message);
+
+        lastSync = DateTimeOffset.UtcNow;
     }
 
     public void OnNavigatedFrom()

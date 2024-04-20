@@ -38,9 +38,9 @@ public sealed partial class MainWindow : WindowEx
 
     private void WindowEx_Activated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
     {
-        DisplayInfo[] displays = DisplayInfo.AllDisplayInfos;
-        uint dpi = this.GetDpiForWindow();
-        double scaleFactor = dpi / 96.0;
-        this.Move((int)(displays[0].WorkingArea.Right - this.Width * scaleFactor), (int)(displays[0].WorkingArea.Bottom - this.Height * scaleFactor));
+        // DisplayInfo[] displays = DisplayInfo.AllDisplayInfos;
+        // uint dpi = this.GetDpiForWindow();
+        // double scaleFactor = dpi / 96.0;
+        // this.Move((int)(displays[0].WorkingArea.Right - this.Width * scaleFactor), (int)(displays[0].WorkingArea.Bottom - this.Height * scaleFactor));
     }
 }
