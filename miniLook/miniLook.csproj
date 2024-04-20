@@ -12,6 +12,7 @@
       <UseWinUI>true</UseWinUI>
       <ImplicitUsings>enable</ImplicitUsings>
       <EnableMsixTooling>true</EnableMsixTooling>
+      <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

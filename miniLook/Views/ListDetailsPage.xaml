@@ -2,9 +2,9 @@
     x:Class="miniLook.Views.ListDetailsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:models="using:miniLook.Core.Models"
     xmlns:views="using:miniLook.Views"
     mc:Ignorable="d">
@@ -18,15 +18,15 @@
                 <FontIcon
                     Grid.Column="0"
                     VerticalAlignment="Center"
+                    AutomationProperties.Name="{x:Bind SymbolName}"
                     FontSize="32"
-                    Glyph="{x:Bind Symbol}"
-                    AutomationProperties.Name="{x:Bind SymbolName}" />
+                    Glyph="{x:Bind Symbol}" />
                 <StackPanel
                     Grid.Column="1"
                     Margin="{StaticResource SmallLeftMargin}"
                     VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Company}" Style="{StaticResource ListTitleStyle}" />
-                    <TextBlock Text="{x:Bind Status}" Style="{StaticResource ListSubTitleStyle}" />
+                    <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Company}" />
+                    <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Status}" />
                 </StackPanel>
             </Grid>
         </DataTemplate>
@@ -43,8 +43,8 @@
                     x:Uid="ListDetails_NoSelection"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    TextAlignment="Center"
-                    Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    Style="{ThemeResource SubtitleTextBlockStyle}"
+                    TextAlignment="Center" />
             </Grid>
         </DataTemplate>
 
@@ -60,17 +60,17 @@
 
     <Grid x:Name="ContentArea">
         <controls:ListDetailsView
-            x:Uid="ListDetails"
             x:Name="ListDetailsViewControl"
+            x:Uid="ListDetails"
             BackButtonBehavior="Inline"
             Background="Transparent"
             BorderBrush="Transparent"
             DetailsTemplate="{StaticResource DetailsTemplate}"
-            ItemsSource="{x:Bind ViewModel.SampleItems}"
             ItemTemplate="{StaticResource ItemTemplate}"
+            ItemsSource="{x:Bind ViewModel.SampleItems, Mode=OneWay}"
             ListHeaderTemplate="{StaticResource ListHeaderTemplate}"
             NoSelectionContentTemplate="{StaticResource NoSelectionContentTemplate}"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
-            ViewStateChanged="OnViewStateChanged"/>
+            ViewStateChanged="OnViewStateChanged" />
     </Grid>
 </Page>
