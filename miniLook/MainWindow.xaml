@@ -8,6 +8,7 @@
     xmlns:windowex="using:WinUIEx"
     Width="200"
     Height="300"
+    Activated="WindowEx_Activated"
     PersistenceId="MainWindow"
     mc:Ignorable="d">
     <Window.SystemBackdrop>

@@ -1,4 +1,5 @@
-﻿using miniLook.Helpers;
+﻿using Dapplo.Windows.User32;
+using miniLook.Helpers;
 
 using Windows.UI.ViewManagement;
 
@@ -24,7 +25,7 @@ public sealed partial class MainWindow : WindowEx
         settings.ColorValuesChanged += Settings_ColorValuesChanged; // cannot use FrameworkElement.ActualThemeChanged event
     }
 
-    // this handles updating the caption button colors correctly when indows system theme is changed
+    // this handles updating the caption button colors correctly when windows system theme is changed
     // while the app is open
     private void Settings_ColorValuesChanged(UISettings sender, object args)
     {
@@ -33,5 +34,13 @@ public sealed partial class MainWindow : WindowEx
         {
             TitleBarHelper.ApplySystemThemeToCaptionButtons();
         });
+    }
+
+    private void WindowEx_Activated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
+    {
+        DisplayInfo[] displays = DisplayInfo.AllDisplayInfos;
+        uint dpi = this.GetDpiForWindow();
+        double scaleFactor = dpi / 96.0;
+        this.Move((int)(displays[0].WorkingArea.Right - this.Width * scaleFactor), (int)(displays[0].WorkingArea.Bottom - this.Height * scaleFactor));
     }
 }
