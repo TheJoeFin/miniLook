@@ -2,9 +2,9 @@
 using CommunityToolkit.Graph.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Graph;
+using Microsoft.UI.Xaml;
 using miniLook.Contracts.ViewModels;
 using miniLook.Core.Contracts.Services;
-using miniLook.Core.Models;
 using System.Collections.ObjectModel;
 
 namespace miniLook.ViewModels;
@@ -16,90 +16,75 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private readonly ISampleDataService _sampleDataService;
 
     [ObservableProperty]
-    private SampleOrder? selected;
+    private Message? selected;
 
-    public ObservableCollection<SampleOrder> SampleItems { get; private set; } = [];
+    public ObservableCollection<Message> SampleItems { get; private set; } = [];
+
+    public DispatcherTimer checkTimer = new();
+    private GraphServiceClient _graphClient;
 
     public ListDetailsViewModel(ISampleDataService sampleDataService)
     {
         _sampleDataService = sampleDataService;
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
+
+        checkTimer.Interval = TimeSpan.FromSeconds(5);
+        checkTimer.Tick += CheckTimer_Tick;
+    }
+
+    private void CheckTimer_Tick(object? sender, object e)
+    {
+        throw new NotImplementedException();
     }
 
     public async void OnNavigatedTo(object parameter)
     {
         SampleItems.Clear();
-
-        // TODO: Replace with real data.
-        var data = await _sampleDataService.GetListDetailsDataAsync();
-
-        foreach (var item in data)
-        {
-            SampleItems.Add(item);
-        }
-
-        EstablishGraph();
+        await EstablishGraph();
     }
 
     private async void TryToLoadMail()
     {
         loadedMail = true;
-        IProvider? provider = ProviderManager.Instance.GlobalProvider;
-        if (provider is not null && provider?.State != ProviderState.SignedIn)
-        {
-            // Prompt for authentication.
-            await provider?.SignInAsync();
-        }
 
-        GraphServiceClient graphClient = provider.GetClient();
-        IMailFolderMessagesCollectionPage messages = await graphClient.Me.MailFolders.Inbox.Messages.Request().GetAsync();
+        if (ProviderManager.Instance.GlobalProvider is not IProvider provider)
+            return;
+
+        _graphClient = provider.GetClient();
+        IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages.Request().GetAsync();
 
         foreach (Message message in messages)
-        {
-            string newText = message.IsRead is true ? "" : "🆕 | ";
-            SampleItems.Add(new SampleOrder
-            {
-                Company = $"{newText}{message.Subject }",
-                Status = message.From.EmailAddress.Address,
-                
-                Details = [
-                    new SampleOrderDetail { 
-                        CategoryDescription = message.BodyPreview,
-                        ProductName = message.From.EmailAddress.Address },
-                    ]
-            });
-        }
+            SampleItems.Add(message);
     }
 
     public void OnNavigatedFrom()
     {
     }
 
-    public void EnsureItemSelected()
-    {
-        Selected ??= SampleItems.First();
-    }
 
-
-    private static void EstablishGraph()
+    private static async Task EstablishGraph()
     {
         string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
-        string[] scopes = ["User.Read", "mail.read"];
+        string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access"];
 
         ProviderManager.Instance.GlobalProvider = new MsalProvider(clientId, scopes);
+
+        if (ProviderManager.Instance.GlobalProvider is not IProvider provider)
+            return;
+
+        bool silentSuccess = await provider.TrySilentSignInAsync();
+
+        if (provider.State == ProviderState.SignedOut && !silentSuccess)
+        {
+            await provider.SignInAsync();
+        }
     }
 
 
-    private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
+    private void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
     {
-        if (args.NewState == ProviderState.Loading || ProviderManager.Instance.GlobalProvider is not IProvider provider)
+        if (args.NewState != ProviderState.SignedIn || ProviderManager.Instance.GlobalProvider is not IProvider provider)
             return;
-
-//         bool silentSuccess = await provider?.TrySilentSignInAsync();
-        if (provider?.State == ProviderState.SignedOut)
-                await provider?.SignInAsync();
-
-        GraphServiceClient graphClient = provider.GetClient();
 
         if (!loadedMail && provider?.State == ProviderState.SignedIn)
             TryToLoadMail();

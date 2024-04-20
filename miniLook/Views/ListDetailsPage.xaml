@@ -4,29 +4,30 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:graph="using:Microsoft.Graph"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:miniLook.Core.Models"
     xmlns:views="using:miniLook.Views"
     mc:Ignorable="d">
     <Page.Resources>
-        <DataTemplate x:Key="ItemTemplate" x:DataType="models:SampleOrder">
+        <DataTemplate x:Key="ItemTemplate" x:DataType="graph:Message">
             <Grid Height="60">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <FontIcon
+                <!--<FontIcon
                     Grid.Column="0"
                     VerticalAlignment="Center"
                     AutomationProperties.Name="{x:Bind SymbolName}"
                     FontSize="32"
-                    Glyph="{x:Bind Symbol}" />
+                    Glyph="{x:Bind Symbol}" />-->
                 <StackPanel
                     Grid.Column="1"
                     Margin="{StaticResource SmallLeftMargin}"
                     VerticalAlignment="Center">
-                    <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Company}" />
-                    <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Status}" />
+                    <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Subject}" />
+                    <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind From.EmailAddress.Address}" />
                 </StackPanel>
             </Grid>
         </DataTemplate>
