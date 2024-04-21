@@ -20,7 +20,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private string accountName = string.Empty;
 
-    public ObservableCollection<Message> SampleItems { get; private set; } = [];
+    public ObservableCollection<Message> MailItems { get; private set; } = [];
+
+    public ObservableCollection<Event> Events { get; private set; } = [];
 
     public DispatcherTimer checkTimer = new();
     private GraphServiceClient? _graphClient;
@@ -53,14 +55,15 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
 
         foreach (Message message in messages)
-            SampleItems.Insert(0, message);
+            MailItems.Insert(0, message);
 
         lastSync = DateTimeOffset.UtcNow;
     }
 
     public async void OnNavigatedTo(object parameter)
     {
-        SampleItems.Clear();
+        MailItems.Clear();
+        Events.Clear();
         await EstablishGraph();
     }
 
@@ -68,6 +71,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private void GoToOutlook()
     {
         _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://outlook.live.com/mail/0/"));
+    }
+
+    [RelayCommand]
+    private void Refresh()
+    {
+        MailItems.Clear();
+        Events.Clear();
+        TryToLoadMail();
     }
 
     private async void TryToLoadMail()
@@ -88,7 +99,15 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             .GetAsync();
 
         foreach (Message message in messages)
-            SampleItems.Add(message);
+            MailItems.Add(message);
+
+        IUserEventsCollectionPage events = await _graphClient.Me.Events
+            .Request()
+            .Top(3)
+            .GetAsync();
+
+        foreach (Event ev in events)
+            Events.Add(ev);
 
         lastSync = DateTimeOffset.UtcNow;
     }
@@ -101,7 +120,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private static async Task EstablishGraph()
     {
         string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
-        string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access"];
+        string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read"];
 
         ProviderManager.Instance.GlobalProvider = new MsalProvider(clientId, scopes);
 

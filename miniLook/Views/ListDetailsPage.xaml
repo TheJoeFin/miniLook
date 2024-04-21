@@ -62,27 +62,57 @@
     <Grid x:Name="ContentArea">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal">
             <HyperlinkButton Command="{x:Bind ViewModel.GoToOutlookCommand}">
                 <SymbolIcon Symbol="Link" />
             </HyperlinkButton>
+            <HyperlinkButton Command="{x:Bind ViewModel.RefreshCommand}">
+                <SymbolIcon Symbol="Refresh" />
+            </HyperlinkButton>
             <TextBlock
                 Padding="10,4"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.AccountName, Mode=OneWay}" />
         </StackPanel>
+        <ListView
+            Grid.Row="1"
+            MaxWidth="320"
+            HorizontalAlignment="Left"
+            ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="graph:Event">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto" />
+                            <RowDefinition Height="auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Orientation="Horizontal">
+                            <HyperlinkButton>
+                                <Viewbox Height="14">
+                                    <SymbolIcon Symbol="Globe" />
+                                </Viewbox>
+                            </HyperlinkButton>
+                            <TextBlock Text="{x:Bind Subject}" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="1" Text="{x:Bind Start.DateTime}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
         <controls:ListDetailsView
             x:Name="ListDetailsViewControl"
             x:Uid="ListDetails"
-            Grid.Row="1"
+            Grid.Row="2"
             BackButtonBehavior="Inline"
             Background="Transparent"
             BorderBrush="Transparent"
             DetailsTemplate="{StaticResource DetailsTemplate}"
             ItemTemplate="{StaticResource ItemTemplate}"
-            ItemsSource="{x:Bind ViewModel.SampleItems, Mode=OneWay}"
+            ItemsSource="{x:Bind ViewModel.MailItems, Mode=OneWay}"
             ListHeaderTemplate="{StaticResource ListHeaderTemplate}"
             NoSelectionContentTemplate="{StaticResource NoSelectionContentTemplate}"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
