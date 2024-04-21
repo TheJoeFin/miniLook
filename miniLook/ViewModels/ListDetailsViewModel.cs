@@ -113,10 +113,26 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         foreach (Message message in messages)
             MailItems.Add(message);
 
-        IUserEventsCollectionPage events = await _graphClient.Me.Events
-            .Request()
-            .Top(3)
+        // Get the user's mailbox settings to determine
+        // their time zone
+        User user = await _graphClient.Me.Request()
+            .Select(u => new { u.MailboxSettings })
             .GetAsync();
+
+        DateTime startOfWeek = GetUtcStartOfWeekInTimeZone(DateTime.Now, user.MailboxSettings.TimeZone);
+        DateTime endOfWeek = startOfWeek.AddDays(2);
+
+        List<QueryOption> queryOptions =
+        [
+            new QueryOption("startDateTime", startOfWeek.ToString("o")),
+            new QueryOption("endDateTime", endOfWeek.ToString("o"))
+        ];
+
+        IUserCalendarViewCollectionPage events = await _graphClient.Me.CalendarView.Request(queryOptions)
+                .Header("Prefer", $"outlook.timezone=\"{user.MailboxSettings.TimeZone}\"")
+                .OrderBy("start/dateTime")
+                .Top(3)
+                .GetAsync();
 
         foreach (Event ev in events)
             Events.Add(ev);
@@ -132,7 +148,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private static async Task EstablishGraph()
     {
         string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
-        string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read"];
+        string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
 
         ProviderManager.Instance.GlobalProvider = new MsalProvider(clientId, scopes);
 
@@ -154,5 +170,19 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         if (!loadedMail && provider?.State == ProviderState.SignedIn)
             TryToLoadMail();
+    }
+
+    private static DateTime GetUtcStartOfWeekInTimeZone(DateTime today, string timeZoneId)
+    {
+        TimeZoneInfo userTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+
+        // Assumes Sunday as first day of week
+        int diff = System.DayOfWeek.Sunday - today.DayOfWeek;
+
+        // create date as unspecified kind
+        DateTime unspecifiedStart = DateTime.SpecifyKind(today.AddDays(diff), DateTimeKind.Unspecified);
+
+        // convert to UTC
+        return TimeZoneInfo.ConvertTimeToUtc(unspecifiedStart, userTimeZone);
     }
 }

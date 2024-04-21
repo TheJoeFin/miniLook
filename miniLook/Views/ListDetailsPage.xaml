@@ -7,11 +7,15 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:graph="using:Microsoft.Graph"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:miniConverters="using:miniLook.Converters"
     xmlns:models="using:miniLook.Core.Models"
     xmlns:views="using:miniLook.Views"
     mc:Ignorable="d">
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="boolToVisConverter" />
+        <converters:StringFormatConverter x:Key="stringFormatConverter" />
+        <miniConverters:GraphDateTimeConverter x:Key="graphDateConverter" />
+
         <DataTemplate x:Key="ItemTemplate" x:DataType="graph:Message">
             <Grid Height="60">
                 <Grid.ColumnDefinitions>
@@ -110,6 +114,10 @@
                 <SymbolIcon Symbol="Refresh" />
             </HyperlinkButton>
 
+            <ToggleButton x:Name="CalendarToggleButton">
+                <SymbolIcon Symbol="Calendar" />
+            </ToggleButton>
+
             <TextBlock
                 Padding="10,0,6,0"
                 VerticalAlignment="Center"
@@ -127,7 +135,7 @@
             MaxWidth="320"
             HorizontalAlignment="Left"
             ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}"
-            Visibility="Collapsed">
+            Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="graph:Event">
                     <Grid Padding="2">
@@ -146,7 +154,7 @@
                             <TextBlock
                                 Grid.Row="1"
                                 VerticalAlignment="Center"
-                                Text="{x:Bind Start.DateTime}" />
+                                Text="{x:Bind Start.DateTime, Converter={StaticResource graphDateConverter}}" />
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
