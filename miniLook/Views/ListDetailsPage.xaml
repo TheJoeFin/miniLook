@@ -60,9 +60,23 @@
     </Page.Resources>
 
     <Grid x:Name="ContentArea">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal">
+            <HyperlinkButton Command="{x:Bind ViewModel.GoToOutlookCommand}">
+                <SymbolIcon Symbol="Link" />
+            </HyperlinkButton>
+            <TextBlock
+                Padding="10,4"
+                Style="{ThemeResource SubtitleTextBlockStyle}"
+                Text="{x:Bind ViewModel.AccountName, Mode=OneWay}" />
+        </StackPanel>
         <controls:ListDetailsView
             x:Name="ListDetailsViewControl"
             x:Uid="ListDetails"
+            Grid.Row="1"
             BackButtonBehavior="Inline"
             Background="Transparent"
             BorderBrush="Transparent"

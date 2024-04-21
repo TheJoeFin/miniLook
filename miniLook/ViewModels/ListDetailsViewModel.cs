@@ -1,10 +1,10 @@
 ﻿using CommunityToolkit.Authentication;
 using CommunityToolkit.Graph.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
 using Microsoft.UI.Xaml;
 using miniLook.Contracts.ViewModels;
-using miniLook.Core.Contracts.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
@@ -14,20 +14,20 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 {
     private bool loadedMail = false;
 
-    private readonly ISampleDataService _sampleDataService;
-
     [ObservableProperty]
     private Message? selected;
+
+    [ObservableProperty]
+    private string accountName = string.Empty;
 
     public ObservableCollection<Message> SampleItems { get; private set; } = [];
 
     public DispatcherTimer checkTimer = new();
-    private GraphServiceClient _graphClient;
+    private GraphServiceClient? _graphClient;
     private DateTimeOffset lastSync = DateTimeOffset.MinValue;
 
-    public ListDetailsViewModel(ISampleDataService sampleDataService)
+    public ListDetailsViewModel()
     {
-        _sampleDataService = sampleDataService;
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
 
         checkTimer.Interval = TimeSpan.FromSeconds(10);
@@ -37,6 +37,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async void CheckTimer_Tick(object? sender, object e)
     {
+        if (_graphClient is null)
+            return;
+
         Debug.WriteLine("Checking for new mail");
 
         string filter = $"receivedDateTime gt {lastSync:yyyy-MM-ddTHH:mm:ssZ}";
@@ -61,6 +64,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         await EstablishGraph();
     }
 
+    [RelayCommand]
+    private void GoToOutlook()
+    {
+        _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://outlook.live.com/mail/0/"));
+    }
+
     private async void TryToLoadMail()
     {
         loadedMail = true;
@@ -69,6 +78,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
 
         _graphClient = provider.GetClient();
+
+        User me = await _graphClient.Me.Request().GetAsync();
+        AccountName = me.DisplayName;
+
         IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
             .Request()
             .Top(100)
