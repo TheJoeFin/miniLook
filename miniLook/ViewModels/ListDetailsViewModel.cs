@@ -6,6 +6,7 @@ using Microsoft.Graph;
 using Microsoft.UI.Xaml;
 using miniLook.Contracts.ViewModels;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Diagnostics;
 
 namespace miniLook.ViewModels;
@@ -20,6 +21,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private string accountName = string.Empty;
 
+    [ObservableProperty]
+    private int numberUnread = 0;
+
     public ObservableCollection<Message> MailItems { get; private set; } = [];
 
     public ObservableCollection<Event> Events { get; private set; } = [];
@@ -32,9 +36,16 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
 
+        MailItems.CollectionChanged += MailItems_CollectionChanged;
+
         checkTimer.Interval = TimeSpan.FromSeconds(10);
         checkTimer.Tick += CheckTimer_Tick;
         checkTimer.Start();
+    }
+
+    private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
     }
 
     private async void CheckTimer_Tick(object? sender, object e)
@@ -46,7 +57,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         string filter = $"receivedDateTime gt {lastSync:yyyy-MM-ddTHH:mm:ssZ}";
 
-        IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
+        IMessageDeltaCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
+            .Delta()
             .Request()
             .Filter(filter)
             .GetAsync();
@@ -134,7 +146,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             await provider.SignInAsync();
         }
     }
-
 
     private void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
     {
