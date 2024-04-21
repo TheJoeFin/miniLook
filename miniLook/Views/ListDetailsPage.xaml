@@ -67,7 +67,7 @@
         </Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal">
             <HyperlinkButton Command="{x:Bind ViewModel.GoToOutlookCommand}">
-                <SymbolIcon Symbol="Link" />
+                <FontIcon Glyph="&#xE8A7;" />
             </HyperlinkButton>
             <HyperlinkButton Command="{x:Bind ViewModel.RefreshCommand}">
                 <SymbolIcon Symbol="Refresh" />
@@ -84,21 +84,24 @@
             ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}">
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="graph:Event">
-                    <Grid>
+                    <Grid Padding="2">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto" />
                             <RowDefinition Height="auto" />
                         </Grid.RowDefinitions>
 
-                        <StackPanel Orientation="Horizontal">
-                            <HyperlinkButton>
+                        <TextBlock Text="{x:Bind Subject}" />
+                        <StackPanel Grid.Row="1" Orientation="Horizontal">
+                            <HyperlinkButton NavigateUri="{x:Bind WebLink}">
                                 <Viewbox Height="14">
-                                    <SymbolIcon Symbol="Globe" />
+                                    <FontIcon Glyph="&#xE8B8;" />
                                 </Viewbox>
                             </HyperlinkButton>
-                            <TextBlock Text="{x:Bind Subject}" />
+                            <TextBlock
+                                Grid.Row="1"
+                                VerticalAlignment="Center"
+                                Text="{x:Bind Start.DateTime}" />
                         </StackPanel>
-                        <TextBlock Grid.Row="1" Text="{x:Bind Start.DateTime}" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

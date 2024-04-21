@@ -23,6 +23,7 @@ public sealed partial class MainWindow : WindowEx
         dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         settings = new UISettings();
         settings.ColorValuesChanged += Settings_ColorValuesChanged; // cannot use FrameworkElement.ActualThemeChanged event
+        ExtendsContentIntoTitleBar = true;
     }
 
     // this handles updating the caption button colors correctly when windows system theme is changed
