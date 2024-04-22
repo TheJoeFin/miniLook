@@ -12,7 +12,11 @@ internal class GraphDateTimeConverter : IValueConverter
 
         DateTimeOffset dto = DateTimeOffset.Parse(valString);
         dto = dto.ToLocalTime();
-        return dto.Humanize();
+
+        if ((dto - DateTimeOffset.Now).TotalHours < 3)
+            return $"{dto.Humanize()} at {dto:hh:mm}";
+        else
+            return dto.ToString("dddd hh:mmt");
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, string language)
