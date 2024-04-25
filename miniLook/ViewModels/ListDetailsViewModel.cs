@@ -53,6 +53,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async void CheckTimer_Tick(object? sender, object e)
     {
+        checkTimer.Stop();
         if (_graphClient is null)
             return;
 
@@ -66,13 +67,44 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             .Filter(filter)
             .GetAsync();
 
-        if (messages.Count == 0)
-            return;
+        foreach (Message newMessage in messages)
+            MailItems.Insert(0, newMessage);
 
-        foreach (Message message in messages)
-            MailItems.Insert(0, message);
+        List<Message> messagesToDelete = [];
+
+        foreach (Message message in MailItems)
+        {
+            Message? refreshMessage = null;
+            try
+            {
+                refreshMessage = await _graphClient.Me.MailFolders.Inbox.Messages[message.Id]
+                    .Request()
+                    .GetAsync();
+            }
+            catch (ServiceException)
+            {
+                // message not found and can be removed
+                messagesToDelete.Add(message);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+
+            if (refreshMessage is null)
+                continue;
+
+            message.IsRead = refreshMessage.IsRead;
+        }
+
+        foreach (Message message in messagesToDelete)
+            MailItems.Remove(message);
 
         lastSync = DateTimeOffset.UtcNow;
+
+        await GetEvents();
+
+        checkTimer.Start();
     }
 
     public async void OnNavigatedTo(object parameter)
@@ -116,6 +148,16 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         foreach (Message message in messages)
             MailItems.Add(message);
 
+        await GetEvents();
+
+        lastSync = DateTimeOffset.UtcNow;
+    }
+
+    private async Task GetEvents()
+    {
+        if (_graphClient is null)
+            return;
+
         // Get the user's mailbox settings to determine
         // their time zone
         User user = await _graphClient.Me.Request()
@@ -137,10 +179,25 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 .Top(3)
                 .GetAsync();
 
+
+        // check to see if any events are different:
+        bool eventsChanged = false;
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (Events.Count <= i || events[i].Id != Events[i].Id)
+            {
+                eventsChanged = true;
+                break;
+            }
+        }
+
+        if (!eventsChanged)
+            return;
+
+        Events.Clear();
+
         foreach (Event ev in events)
             Events.Add(ev);
-
-        lastSync = DateTimeOffset.UtcNow;
     }
 
     public void OnNavigatedFrom()

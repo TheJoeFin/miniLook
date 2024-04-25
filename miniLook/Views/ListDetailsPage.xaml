@@ -22,19 +22,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <!--<FontIcon
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    AutomationProperties.Name="{x:Bind SymbolName}"
-                    FontSize="32"
-                    Glyph="{x:Bind Symbol}" />-->
                 <Border
                     Width="10"
                     Height="10"
                     Margin="-6,0,-4,0"
                     Background="{ThemeResource AccentFillColorDefaultBrush}"
                     CornerRadius="5"
-                    Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
+                    Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
                 <StackPanel
                     Grid.Column="1"
                     Margin="{StaticResource SmallLeftMargin}"
