@@ -35,6 +35,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private GraphServiceClient? _graphClient;
     private DateTimeOffset lastSync = DateTimeOffset.MinValue;
 
+    private object? deltaLink = null;
+    private IMessageDeltaCollectionPage? previousPage = null;
+
     public ListDetailsViewModel()
     {
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
@@ -43,7 +46,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         checkTimer.Interval = TimeSpan.FromSeconds(10);
         checkTimer.Tick += CheckTimer_Tick;
-        checkTimer.Start();
     }
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -59,48 +61,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         Debug.WriteLine("Checking for new mail");
 
-        string filter = $"receivedDateTime gt {lastSync:yyyy-MM-ddTHH:mm:ssZ}";
-
-        IMessageDeltaCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
-            .Delta()
-            .Request()
-            .Filter(filter)
-            .GetAsync();
-
-        foreach (Message newMessage in messages)
-            MailItems.Insert(0, newMessage);
-
-        List<Message> messagesToDelete = [];
-
-        // this method seems to be a bit intensive and I should figure out how to do it better
-        // not sure how the details work, but I'll keep trying to figure that out
-        foreach (Message message in MailItems)
-        {
-            Message? refreshMessage = null;
-            try
-            {
-                refreshMessage = await _graphClient.Me.MailFolders.Inbox.Messages[message.Id]
-                    .Request()
-                    .GetAsync();
-            }
-            catch (ServiceException)
-            {
-                // message not found and can be removed
-                messagesToDelete.Add(message);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
-
-            if (refreshMessage is null)
-                continue;
-
-            message.IsRead = refreshMessage.IsRead;
-        }
-
-        foreach (Message message in messagesToDelete)
-            MailItems.Remove(message);
+        await SyncMail();
 
         lastSync = DateTimeOffset.UtcNow;
 
@@ -117,7 +78,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
-    private void GoToOutlook()
+    private static void GoToOutlook()
     {
         _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://outlook.live.com/mail/0/"));
     }
@@ -142,17 +103,72 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         User me = await _graphClient.Me.Request().GetAsync();
         AccountName = me.DisplayName;
 
-        IMailFolderMessagesCollectionPage messages = await _graphClient.Me.MailFolders.Inbox.Messages
-            .Request()
-            .Top(100)
-            .GetAsync();
-
-        foreach (Message message in messages)
-            MailItems.Add(message);
+        await SyncMail();
 
         await GetEvents();
 
         lastSync = DateTimeOffset.UtcNow;
+        checkTimer.Start();
+    }
+
+    private async Task SyncMail()
+    {
+        IMessageDeltaCollectionPage currentPageOfMessages;
+
+        if (previousPage is null)
+        {
+            currentPageOfMessages = await _graphClient.Me.MailFolders.Inbox.Messages
+            .Delta()
+            .Request()
+            .GetAsync();
+        }
+        else
+        {
+            previousPage.InitializeNextPageRequest(_graphClient, deltaLink.ToString());
+            currentPageOfMessages = await previousPage.NextPageRequest.GetAsync();
+        }
+
+        do
+        {
+            foreach (Message message in currentPageOfMessages)
+            {
+                if (message.AdditionalData is not null 
+                    && message.AdditionalData.TryGetValue("@removed", out object? removed))
+                {
+                    Message? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
+                    if (matchingMessage is not null)
+                        MailItems.Remove(matchingMessage);
+
+                    continue;
+                }
+
+                // TODO: here the message changes read status, but the UI is not updating now
+                if (message.AdditionalData is null && message.IsRead is not null)
+                {
+                    Message? changedMessage = MailItems.FirstOrDefault(message => message.Id == message.Id);
+                    if (changedMessage is not null)
+                        changedMessage.IsRead = message.IsRead;
+
+                    continue;
+                }
+
+
+                if (MailItems.Count == 0 || MailItems.First().ReceivedDateTime < message.ReceivedDateTime)
+                    MailItems.Insert(0, message);
+                else
+                    MailItems.Add(message);
+            }
+
+            previousPage = currentPageOfMessages;
+        }
+        while (currentPageOfMessages.NextPageRequest is not null
+        && (currentPageOfMessages = await currentPageOfMessages.NextPageRequest.GetAsync()) is not null);
+
+        object? outDeltaLink = null;
+        bool successInGettingDeltaLink = currentPageOfMessages?.AdditionalData.TryGetValue("@odata.deltaLink", out outDeltaLink) is true;
+
+        if (successInGettingDeltaLink)
+            deltaLink = outDeltaLink;
     }
 
     private async Task GetEvents()
