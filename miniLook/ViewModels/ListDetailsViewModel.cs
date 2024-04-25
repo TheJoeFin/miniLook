@@ -1,13 +1,16 @@
 ﻿using CommunityToolkit.Authentication;
+using CommunityToolkit.Authentication.Extensions;
 using CommunityToolkit.Graph.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
+using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.UI.Xaml;
 using miniLook.Contracts.ViewModels;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using Windows.Storage;
 
 namespace miniLook.ViewModels;
 
@@ -147,20 +150,30 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private static async Task EstablishGraph()
     {
+        if (ProviderManager.Instance.GlobalProvider != null)
+            return;
+
         string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
         string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
 
-        ProviderManager.Instance.GlobalProvider = new MsalProvider(clientId, scopes);
 
-        if (ProviderManager.Instance.GlobalProvider is not IProvider provider)
-            return;
+        MsalProvider provider = new(clientId, scopes, null, false, true);
+
+        string cacheFileName = "msal_cache.dat";
+        string cacheDirectory = ApplicationData.Current.LocalCacheFolder.Path;
+        // Configure the token cache storage for non-UWP applications.
+        // https://github.com/AzureAD/microsoft-authentication-extensions-for-dotnet/wiki/Cross-platform-Token-Cache
+        // https://github.com/Richasy/Graph-Controls/tree/main/Samples/ManualGraphRequestSample
+        StorageCreationProperties storageProperties = new StorageCreationPropertiesBuilder(
+            cacheFileName, cacheDirectory).Build();
+        await provider.InitTokenCacheAsync(storageProperties);
+
+        ProviderManager.Instance.GlobalProvider = provider;
 
         bool silentSuccess = await provider.TrySilentSignInAsync();
 
-        if (provider.State == ProviderState.SignedOut && !silentSuccess)
-        {
+        if (!silentSuccess)
             await provider.SignInAsync();
-        }
     }
 
     private void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
