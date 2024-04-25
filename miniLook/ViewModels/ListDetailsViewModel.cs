@@ -72,6 +72,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         List<Message> messagesToDelete = [];
 
+        // this method seems to be a bit intensive and I should figure out how to do it better
+        // not sure how the details work, but I'll keep trying to figure that out
         foreach (Message message in MailItems)
         {
             Message? refreshMessage = null;
