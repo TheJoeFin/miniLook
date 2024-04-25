@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
 using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.UI.Xaml;
+using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -37,9 +38,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private object? deltaLink = null;
     private IMessageDeltaCollectionPage? previousPage = null;
+    private INavigationService NavigationService { get; }
 
-    public ListDetailsViewModel()
+    public ListDetailsViewModel(INavigationService navigationService)
     {
+        NavigationService = navigationService;
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
 
         MailItems.CollectionChanged += MailItems_CollectionChanged;
@@ -106,6 +109,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         ClearOutContents();
         await ProviderManager.Instance.GlobalProvider?.SignOutAsync();
+    }
+
+    [RelayCommand]
+    private void NavigateToSettings()
+    {
+        NavigationService.NavigateTo(typeof(SettingsViewModel).FullName!);
     }
 
     private async void TryToLoadMail()

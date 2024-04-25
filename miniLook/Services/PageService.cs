@@ -14,6 +14,7 @@ public class PageService : IPageService
 
     public PageService()
     {
+        Configure<ShellViewModel, ShellPage>();
         Configure<ListDetailsViewModel, ListDetailsPage>();
         Configure<SettingsViewModel, SettingsPage>();
     }
