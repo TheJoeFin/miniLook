@@ -86,12 +86,26 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [RelayCommand]
     private void Refresh()
     {
+        ClearOutContents();
+        TryToLoadMail();
+    }
+
+    private void ClearOutContents()
+    {
         MailItems.Clear();
         Events.Clear();
 
+        checkTimer.Stop();
+
         deltaLink = null;
         previousPage = null;
-        TryToLoadMail();
+    }
+
+    [RelayCommand]
+    private async Task SignOut()
+    {
+        ClearOutContents();
+        await ProviderManager.Instance.GlobalProvider?.SignOutAsync();
     }
 
     private async void TryToLoadMail()

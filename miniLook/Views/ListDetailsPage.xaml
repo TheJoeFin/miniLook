@@ -125,18 +125,37 @@
             <HyperlinkButton
                 x:Name="GoToOutlookDotComButton"
                 Command="{x:Bind ViewModel.GoToOutlookCommand}"
-                RelativePanel.LeftOf="RefreshButton"
+                RelativePanel.LeftOf="MoreButton"
                 ToolTipService.ToolTip="Go To Outlook.com">
                 <FontIcon Glyph="&#xE8A7;" />
             </HyperlinkButton>
-            <HyperlinkButton
-                x:Name="RefreshButton"
-                Command="{x:Bind ViewModel.RefreshCommand}"
-                RelativePanel.AlignRightWithPanel="True"
-                ToolTipService.ToolTip="Refresh">
-                <SymbolIcon Symbol="Refresh" />
-            </HyperlinkButton>
-
+            <Button x:Name="MoreButton" RelativePanel.AlignRightWithPanel="True">
+                <Button.Content>
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE712;" />
+                </Button.Content>
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem
+                            Command="{x:Bind ViewModel.RefreshCommand}"
+                            Icon="Refresh"
+                            Text="Refresh"
+                            ToolTipService.ToolTip="Refresh" />
+                        <MenuFlyoutItem
+                            Command="{x:Bind ViewModel.SignOutCommand}"
+                            Text="Sign out"
+                            ToolTipService.ToolTip="Sign out">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF3B1;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Settings" ToolTipService.ToolTip="Settings">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE713;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
         </RelativePanel>
 
         <GridView
