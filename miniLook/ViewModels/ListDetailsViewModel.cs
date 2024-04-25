@@ -88,6 +88,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         MailItems.Clear();
         Events.Clear();
+
+        deltaLink = null;
+        previousPage = null;
         TryToLoadMail();
     }
 
