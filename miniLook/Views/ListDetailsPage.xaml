@@ -106,29 +106,44 @@
                 Text="{x:Bind ViewModel.AccountName, Mode=OneWay}" />
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal">
-            <HyperlinkButton Command="{x:Bind ViewModel.GoToOutlookCommand}">
-                <FontIcon Glyph="&#xE8A7;" />
-            </HyperlinkButton>
-            <HyperlinkButton Command="{x:Bind ViewModel.RefreshCommand}">
-                <SymbolIcon Symbol="Refresh" />
-            </HyperlinkButton>
+        <RelativePanel Grid.Row="1">
 
-            <ToggleButton x:Name="CalendarToggleButton">
+            <ToggleButton
+                x:Name="CalendarToggleButton"
+                RelativePanel.AlignLeftWithPanel="True"
+                ToolTipService.ToolTip="Show a couple of events in the next couple days">
                 <SymbolIcon Symbol="Calendar" />
             </ToggleButton>
 
             <TextBlock
+                x:Name="UnreadMailNumber"
                 Padding="10,0,6,0"
                 VerticalAlignment="Center"
+                RelativePanel.RightOf="CalendarToggleButton"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
             <TextBlock
                 VerticalAlignment="Center"
+                RelativePanel.RightOf="UnreadMailNumber"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="unread" />
 
-        </StackPanel>
+            <HyperlinkButton
+                x:Name="GoToOutlookDotComButton"
+                Command="{x:Bind ViewModel.GoToOutlookCommand}"
+                RelativePanel.LeftOf="RefreshButton"
+                ToolTipService.ToolTip="Go To Outlook.com">
+                <FontIcon Glyph="&#xE8A7;" />
+            </HyperlinkButton>
+            <HyperlinkButton
+                x:Name="RefreshButton"
+                Command="{x:Bind ViewModel.RefreshCommand}"
+                RelativePanel.AlignRightWithPanel="True"
+                ToolTipService.ToolTip="Refresh">
+                <SymbolIcon Symbol="Refresh" />
+            </HyperlinkButton>
+
+        </RelativePanel>
 
         <ListView
             Grid.Row="2"
@@ -146,9 +161,9 @@
 
                         <TextBlock Text="{x:Bind Subject}" />
                         <StackPanel Grid.Row="1" Orientation="Horizontal">
-                            <HyperlinkButton NavigateUri="{x:Bind WebLink}">
+                            <HyperlinkButton NavigateUri="{x:Bind WebLink}" ToolTipService.ToolTip="See this event on Outlook.com">
                                 <Viewbox Height="14">
-                                    <FontIcon Glyph="&#xE8B8;" />
+                                    <FontIcon Glyph="&#xE8AD;" />
                                 </Viewbox>
                             </HyperlinkButton>
                             <TextBlock

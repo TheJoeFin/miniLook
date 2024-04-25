@@ -122,12 +122,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             .Select(u => new { u.MailboxSettings })
             .GetAsync();
 
-        DateTime startOfWeek = GetUtcStartOfWeekInTimeZone(DateTime.Now, user.MailboxSettings.TimeZone);
-        DateTime endOfWeek = startOfWeek.AddDays(2);
+        DateTime now = DateTime.UtcNow;
+        DateTime endOfWeek = now.AddDays(2);
 
         List<QueryOption> queryOptions =
         [
-            new QueryOption("startDateTime", startOfWeek.ToString("o")),
+            new QueryOption("startDateTime", now.ToString("o")),
             new QueryOption("endDateTime", endOfWeek.ToString("o"))
         ];
 
@@ -183,19 +183,5 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         if (!loadedMail && provider?.State == ProviderState.SignedIn)
             TryToLoadMail();
-    }
-
-    private static DateTime GetUtcStartOfWeekInTimeZone(DateTime today, string timeZoneId)
-    {
-        TimeZoneInfo userTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-
-        // Assumes Sunday as first day of week
-        int diff = System.DayOfWeek.Sunday - today.DayOfWeek;
-
-        // create date as unspecified kind
-        DateTime unspecifiedStart = DateTime.SpecifyKind(today.AddDays(diff), DateTimeKind.Unspecified);
-
-        // convert to UTC
-        return TimeZoneInfo.ConvertTimeToUtc(unspecifiedStart, userTimeZone);
     }
 }
