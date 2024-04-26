@@ -15,6 +15,7 @@
             <TextBlock
                 Margin="{StaticResource SmallLeftMargin}"
                 VerticalAlignment="Center"
+                IsTextSelectionEnabled="True"
                 Style="{ThemeResource TitleTextBlockStyle}"
                 Text="{x:Bind ListDetailsMenuItem.Subject, Mode=OneWay}"
                 TextWrapping="WrapWholeWords" />
@@ -27,21 +28,33 @@
                 Click="BrowserLink_Click"
                 Content="See this email in Outlook in a browser" />
             <StackPanel Padding="0,15,0,0">
-                <TextBlock Style="{StaticResource DetailSubTitleStyle}" Text="From" />
+                <TextBlock
+                    IsTextSelectionEnabled="True"
+                    Style="{StaticResource DetailSubTitleStyle}"
+                    Text="From" />
 
-                <TextBlock Style="{StaticResource DetailBodyBaseMediumStyle}" Text="{x:Bind ListDetailsMenuItem.From.EmailAddress.Address, Mode=OneWay}" />
+                <TextBlock
+                    IsTextSelectionEnabled="True"
+                    Style="{StaticResource DetailBodyBaseMediumStyle}"
+                    Text="{x:Bind ListDetailsMenuItem.From.EmailAddress.Address, Mode=OneWay}" />
 
                 <TextBlock
                     Margin="{StaticResource SmallTopMargin}"
                     Style="{StaticResource DetailSubTitleStyle}"
                     Text="Received Date" />
-                <TextBlock Style="{StaticResource DetailBodyBaseMediumStyle}" Text="{x:Bind ListDetailsMenuItem.ReceivedDateTime, Mode=OneWay}" />
+                <TextBlock
+                    IsTextSelectionEnabled="True"
+                    Style="{StaticResource DetailBodyBaseMediumStyle}"
+                    Text="{x:Bind ListDetailsMenuItem.ReceivedDateTime, Mode=OneWay}" />
 
                 <TextBlock
                     Margin="{StaticResource SmallTopMargin}"
                     Style="{StaticResource DetailSubTitleStyle}"
                     Text="Body" />
-                <TextBlock Style="{StaticResource DetailBodyBaseMediumStyle}" Text="{x:Bind ListDetailsMenuItem.BodyPreview, Mode=OneWay}" />
+                <TextBlock
+                    IsTextSelectionEnabled="True"
+                    Style="{StaticResource DetailBodyBaseMediumStyle}"
+                    Text="{x:Bind ListDetailsMenuItem.BodyPreview, Mode=OneWay}" />
 
             </StackPanel>
         </StackPanel>
