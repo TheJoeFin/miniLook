@@ -13,6 +13,14 @@
       <ImplicitUsings>enable</ImplicitUsings>
       <EnableMsixTooling>true</EnableMsixTooling>
       <Nullable>enable</Nullable>
+      <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+      <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+      <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+      <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+      <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
+      <GenerateTestArtifacts>True</GenerateTestArtifacts>
+      <AppxBundle>Never</AppxBundle>
+      <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\ShellPage.xaml" />
