@@ -6,7 +6,6 @@ using miniLook.Activation;
 using miniLook.Contracts.Services;
 using miniLook.Core.Contracts.Services;
 using miniLook.Core.Services;
-using miniLook.Helpers;
 using miniLook.Models;
 using miniLook.Notifications;
 using miniLook.Services;
@@ -32,9 +31,7 @@ public partial class App : Application
         where T : class
     {
         if ((App.Current as App)!.Host.Services.GetService(typeof(T)) is not T service)
-        {
             throw new ArgumentException($"{typeof(T)} needs to be registered in ConfigureServices within App.xaml.cs.");
-        }
 
         return service;
     }

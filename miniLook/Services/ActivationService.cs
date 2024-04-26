@@ -45,17 +45,13 @@ public class ActivationService : IActivationService
 
     private async Task HandleActivationAsync(object activationArgs)
     {
-        var activationHandler = _activationHandlers.FirstOrDefault(h => h.CanHandle(activationArgs));
+        IActivationHandler? activationHandler = _activationHandlers.FirstOrDefault(h => h.CanHandle(activationArgs));
 
         if (activationHandler != null)
-        {
             await activationHandler.HandleAsync(activationArgs);
-        }
 
         if (_defaultHandler.CanHandle(activationArgs))
-        {
             await _defaultHandler.HandleAsync(activationArgs);
-        }
     }
 
     private async Task InitializeAsync()

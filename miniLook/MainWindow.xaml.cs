@@ -1,5 +1,4 @@
-﻿using Dapplo.Windows.User32;
-using miniLook.Helpers;
+﻿using miniLook.Helpers;
 
 using Windows.UI.ViewManagement;
 
@@ -9,7 +8,7 @@ public sealed partial class MainWindow : WindowEx
 {
     private Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue;
 
-    private UISettings settings;
+    private readonly UISettings settings;
 
     public MainWindow()
     {

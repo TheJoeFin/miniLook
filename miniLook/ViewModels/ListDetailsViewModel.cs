@@ -34,7 +34,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public DispatcherTimer checkTimer = new();
     private GraphServiceClient? _graphClient;
-    private DateTimeOffset lastSync = DateTimeOffset.MinValue;
 
     private object? deltaLink = null;
     private IMessageDeltaCollectionPage? previousPage = null;
@@ -59,9 +58,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         Debug.WriteLine("Checking for new mail");
 
         await SyncMail();
-
-        lastSync = DateTimeOffset.UtcNow;
-
         await GetEvents();
 
         checkTimer.Start();
@@ -136,28 +132,29 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         AccountName = me.DisplayName;
 
         await SyncMail();
-
         await GetEvents();
 
-        lastSync = DateTimeOffset.UtcNow;
         checkTimer.Start();
     }
 
     private async Task SyncMail()
     {
+        if (_graphClient is null)
+            return;
+
         IMessageDeltaCollectionPage currentPageOfMessages;
 
-        if (previousPage is null)
+        if (previousPage is not null && deltaLink is not null)
+        {
+            previousPage.InitializeNextPageRequest(_graphClient, deltaLink.ToString());
+            currentPageOfMessages = await previousPage.NextPageRequest.GetAsync();
+        }
+        else
         {
             currentPageOfMessages = await _graphClient.Me.MailFolders.Inbox.Messages
             .Delta()
             .Request()
             .GetAsync();
-        }
-        else
-        {
-            previousPage.InitializeNextPageRequest(_graphClient, deltaLink.ToString());
-            currentPageOfMessages = await previousPage.NextPageRequest.GetAsync();
         }
 
         do
