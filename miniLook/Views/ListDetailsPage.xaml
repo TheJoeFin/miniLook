@@ -133,25 +133,26 @@
                 </Button.Flyout>
             </Button>
         </RelativePanel>
-
-        <GridView
+        <Grid
             Grid.Row="1"
-            HorizontalAlignment="Stretch"
+            Padding="12"
             Background="{ThemeResource ControlFillColorSecondary}"
-            ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}"
             Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
-            <GridView.ItemTemplate>
+            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}">
+                <ItemsRepeater.Layout>
+                    <controls:WrapLayout HorizontalSpacing="12" VerticalSpacing="12" />
+                </ItemsRepeater.Layout>
                 <DataTemplate x:DataType="graph:Event">
                     <Grid
-                        MinWidth="120"
+                        MinWidth="140"
                         Padding="2"
-                        HorizontalAlignment="Stretch">
+                        CornerRadius="5">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto" />
                             <RowDefinition Height="auto" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock HorizontalAlignment="Left" Text="{x:Bind Subject}" />
+                        <TextBlock HorizontalAlignment="Stretch" Text="{x:Bind Subject}" />
                         <StackPanel
                             Grid.Row="1"
                             HorizontalAlignment="Left"
@@ -168,8 +169,8 @@
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
-            </GridView.ItemTemplate>
-        </GridView>
+            </ItemsRepeater>
+        </Grid>
         <controls:ListDetailsView
             x:Name="ListDetailsViewControl"
             x:Uid="ListDetails"
