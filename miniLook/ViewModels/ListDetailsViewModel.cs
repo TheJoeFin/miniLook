@@ -43,12 +43,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     public ListDetailsViewModel(INavigationService navigationService)
     {
         NavigationService = navigationService;
-        ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
-
-        MailItems.CollectionChanged += MailItems_CollectionChanged;
-
-        checkTimer.Interval = TimeSpan.FromSeconds(10);
-        checkTimer.Tick += CheckTimer_Tick;
     }
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -77,7 +71,19 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         MailItems.Clear();
         Events.Clear();
+
+        ProviderManager.Instance.ProviderStateChanged -= OnProviderStateChanged;
+        ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
+
+        MailItems.CollectionChanged -= MailItems_CollectionChanged;
+        MailItems.CollectionChanged += MailItems_CollectionChanged;
+
+        checkTimer.Interval = TimeSpan.FromSeconds(10);
+        checkTimer.Tick += CheckTimer_Tick;
+
         await EstablishGraph();
+
+        TryToLoadMail();
     }
 
     [RelayCommand]
@@ -246,6 +252,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public void OnNavigatedFrom()
     {
+        ClearOutContents();
     }
 
 

@@ -23,12 +23,11 @@ public partial class SettingsViewModel : ObservableRecipient
     [ObservableProperty]
     private string _versionDescription;
 
-    public ICommand SwitchThemeCommand
-    {
-        get;
-    }
+    public ICommand SwitchThemeCommand { get; }
 
-    public SettingsViewModel(IThemeSelectorService themeSelectorService)
+    public INavigationService NavigationService { get; }
+
+    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService)
     {
         _themeSelectorService = themeSelectorService;
         _elementTheme = _themeSelectorService.Theme;
@@ -43,6 +42,15 @@ public partial class SettingsViewModel : ObservableRecipient
                     await _themeSelectorService.SetThemeAsync(param);
                 }
             });
+
+        NavigationService = navigationService;
+    }
+
+    [RelayCommand]
+    private void GoBack()
+    {
+        if (NavigationService.CanGoBack)
+            NavigationService.GoBack();
     }
 
     private static string GetVersionDescription()

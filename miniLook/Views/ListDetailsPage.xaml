@@ -121,7 +121,10 @@
                                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF3B1;" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Settings" ToolTipService.ToolTip="Settings">
+                        <MenuFlyoutItem
+                            Command="{x:Bind ViewModel.NavigateToSettingsCommand}"
+                            Text="Settings"
+                            ToolTipService.ToolTip="Settings">
                             <MenuFlyoutItem.Icon>
                                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE713;" />
                             </MenuFlyoutItem.Icon>
