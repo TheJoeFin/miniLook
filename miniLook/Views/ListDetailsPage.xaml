@@ -114,6 +114,14 @@
                             Text="Refresh"
                             ToolTipService.ToolTip="Refresh" />
                         <MenuFlyoutItem
+                            Command="{x:Bind ViewModel.SignInCommand}"
+                            Text="Sign in"
+                            ToolTipService.ToolTip="Profile">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE77B;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem
                             Command="{x:Bind ViewModel.SignOutCommand}"
                             Text="Sign out"
                             ToolTipService.ToolTip="Sign out">

@@ -114,6 +114,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
+    private async Task SignIn()
+    {
+        ProviderManager.Instance.GlobalProvider = null;
+        await EstablishGraph();
+    }
+
+    [RelayCommand]
     private void NavigateToSettings()
     {
         NavigationService.NavigateTo(typeof(SettingsViewModel).FullName!);
@@ -251,7 +258,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         ClearOutContents();
     }
-
 
     private static async Task EstablishGraph()
     {
