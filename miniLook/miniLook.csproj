@@ -21,8 +21,9 @@
       <GenerateTestArtifacts>True</GenerateTestArtifacts>
       <AppxBundle>Never</AppxBundle>
       <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
-      <PackageCertificateThumbprint>3C888804A22A720DBDB8D55AACFBFC64B306B809</PackageCertificateThumbprint>
+      <PackageCertificateThumbprint>6629530A93C243FD31F12BF93E42D2C8ACAB22B1</PackageCertificateThumbprint>
       <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+      <AppxPackageDir>AppPackages\</AppxPackageDir>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\ShellPage.xaml" />
@@ -65,4 +66,10 @@
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <PRIResource Update="OAuth.resw">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </PRIResource>
+  </ItemGroup>
 </Project>

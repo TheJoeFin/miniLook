@@ -129,7 +129,7 @@
                                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF3B1;" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <ToggleMenuFlyoutItem x:Name="DebugViewToggleItem" Text="Debug View">
+                        <ToggleMenuFlyoutItem x:Name="DebugViewToggleItem" Text="Debug Log">
                             <MenuFlyoutItem.Icon>
                                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEBE8;" />
                             </MenuFlyoutItem.Icon>

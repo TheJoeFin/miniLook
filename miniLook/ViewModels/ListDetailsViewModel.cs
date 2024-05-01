@@ -74,7 +74,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public async void OnNavigatedTo(object parameter)
     {
-        DebugText += $"\nNavigated to";
+        DebugText += $"\nNavigated to ListView Detail Page";
         MailItems.Clear();
         Events.Clear();
 
@@ -299,7 +299,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
         string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
-
+        DebugText += $"\nScopes and clientID set";
 
         MsalProvider provider = new(clientId, scopes, null, false, true);
 
