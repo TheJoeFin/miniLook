@@ -14,14 +14,12 @@
       <EnableMsixTooling>true</EnableMsixTooling>
       <Nullable>enable</Nullable>
       <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
-      <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+      <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
       <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
       <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
       <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
       <GenerateTestArtifacts>True</GenerateTestArtifacts>
       <AppxBundle>Never</AppxBundle>
-      <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
-      <PackageCertificateThumbprint>6629530A93C243FD31F12BF93E42D2C8ACAB22B1</PackageCertificateThumbprint>
       <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
       <AppxPackageDir>AppPackages\</AppxPackageDir>
   </PropertyGroup>
