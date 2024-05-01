@@ -129,6 +129,11 @@
                                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF3B1;" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
+                        <ToggleMenuFlyoutItem x:Name="DebugViewToggleItem" Text="Debug View">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEBE8;" />
+                            </MenuFlyoutItem.Icon>
+                        </ToggleMenuFlyoutItem>
                         <MenuFlyoutItem
                             Command="{x:Bind ViewModel.NavigateToSettingsCommand}"
                             Text="Settings"
@@ -193,5 +198,25 @@
             NoSelectionContentTemplate="{StaticResource NoSelectionContentTemplate}"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
             ViewStateChanged="OnViewStateChanged" />
+
+        <Border
+            x:Name="DebugPane"
+            Grid.Row="2"
+            MinWidth="200"
+            MinHeight="150"
+            Margin="10"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+            CornerRadius="4"
+            Visibility="{x:Bind DebugViewToggleItem.IsChecked, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+            <ScrollViewer VerticalScrollBarVisibility="Visible">
+                <TextBlock
+                    x:Name="DebugText"
+                    Margin="10,10"
+                    Text="{x:Bind ViewModel.DebugText, Mode=OneWay}"
+                    TextWrapping="WrapWholeWords" />
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Page>

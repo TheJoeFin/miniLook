@@ -37,6 +37,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private object? deltaLink = null;
     private IMessageDeltaCollectionPage? previousPage = null;
+    private bool isSyncingMail = false;
+
+    [ObservableProperty]
+    private string debugText = $"debug text\n{DateTime.Now.ToShortDateString()}\n{DateTime.Now.ToShortTimeString()}";
+
     private INavigationService NavigationService { get; }
 
     public ListDetailsViewModel(INavigationService navigationService)
@@ -51,9 +56,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async void CheckTimer_Tick(object? sender, object e)
     {
+        DebugText += $"\n{DateTime.Now.ToShortTimeString()}: Check new timer tick";
         checkTimer.Stop();
         if (_graphClient is null)
+        {
+            DebugText += $"\nGraph Client is null, returning";
             return;
+        }
 
         Debug.WriteLine("Checking for new mail");
 
@@ -65,6 +74,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public async void OnNavigatedTo(object parameter)
     {
+        DebugText += $"\nNavigated to";
         MailItems.Clear();
         Events.Clear();
 
@@ -130,8 +140,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         loadedMail = true;
 
+        DebugText += $"\nTrying to load mail";
         if (ProviderManager.Instance.GlobalProvider is not IProvider provider)
+        {
+            DebugText += $"\nProvider is not provider, returning";
             return;
+        }
 
         _graphClient = provider.GetClient();
 
@@ -146,8 +160,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async Task SyncMail()
     {
-        if (_graphClient is null)
+        DebugText += $"\nSyncing Mail";
+        if (_graphClient is null || isSyncingMail)
+        {
+            DebugText += $"\nGraph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return";
             return;
+        }
+
+        isSyncingMail = true;
 
         IMessageDeltaCollectionPage currentPageOfMessages;
 
@@ -205,12 +225,19 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         if (successInGettingDeltaLink)
             deltaLink = outDeltaLink;
+
+        isSyncingMail = false;
+        DebugText += $"\nMail synced";
     }
 
     private async Task GetEvents()
     {
+        DebugText += $"\nGetting Events";
         if (_graphClient is null)
+        {
+            DebugText += $"\nGraph client is null, returning";
             return;
+        }
 
         // Get the user's mailbox settings to determine
         // their time zone
@@ -252,6 +279,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         foreach (Event ev in events)
             Events.Add(ev);
+
+        DebugText += $"\nEvents gotten";
     }
 
     public void OnNavigatedFrom()
@@ -259,10 +288,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         ClearOutContents();
     }
 
-    private static async Task EstablishGraph()
+    private async Task EstablishGraph()
     {
+        DebugText += $"\nEstablishing Graph";
         if (ProviderManager.Instance.GlobalProvider != null)
+        {
+            DebugText += $"\nGlobal Provider not null";
             return;
+        }
 
         string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
         string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
@@ -283,12 +316,15 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         bool silentSuccess = await provider.TrySilentSignInAsync();
 
+        DebugText += $"\nSilentSignIn success {silentSuccess}";
+
         if (!silentSuccess)
             await provider.SignInAsync();
     }
 
     private void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
     {
+        DebugText += $"\nProvider state changed to {args.NewState}";
         if (args.NewState != ProviderState.SignedIn || ProviderManager.Instance.GlobalProvider is not IProvider provider)
             return;
 

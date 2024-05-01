@@ -22,6 +22,7 @@
       <AppxBundle>Never</AppxBundle>
       <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
       <PackageCertificateThumbprint>3C888804A22A720DBDB8D55AACFBFC64B306B809</PackageCertificateThumbprint>
+      <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\ShellPage.xaml" />
