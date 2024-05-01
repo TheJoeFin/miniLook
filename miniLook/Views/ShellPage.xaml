@@ -35,7 +35,7 @@
                 x:Name="AppTitleBarText"
                 VerticalAlignment="Center"
                 Style="{StaticResource CaptionTextBlockStyle}"
-                Text="miniLook"
+                Text="miniLook beta"
                 TextWrapping="NoWrap" />
             <TextBlock
                 Padding="6,4"
