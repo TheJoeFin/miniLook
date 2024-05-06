@@ -28,6 +28,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private int numberUnread = 0;
 
+    [ObservableProperty]
+    private bool isLoadingContent = false;
+
     public ObservableCollection<Message> MailItems { get; private set; } = [];
 
     public ObservableCollection<Event> Events { get; private set; } = [];
@@ -65,10 +68,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         }
 
         Debug.WriteLine("Checking for new mail");
-
+        IsLoadingContent = true;
         await SyncMail();
         await GetEvents();
 
+        IsLoadingContent = false;
         checkTimer.Start();
     }
 
@@ -149,11 +153,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         _graphClient = provider.GetClient();
 
+        IsLoadingContent = true;
         User me = await _graphClient.Me.Request().GetAsync();
         AccountName = me.DisplayName;
 
         await SyncMail();
         await GetEvents();
+
+        IsLoadingContent = false;
 
         checkTimer.Start();
     }

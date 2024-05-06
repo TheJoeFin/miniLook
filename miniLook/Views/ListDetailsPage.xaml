@@ -90,10 +90,19 @@
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
             <TextBlock
+                x:Name="UnreadMailText"
                 VerticalAlignment="Center"
                 RelativePanel.RightOf="UnreadMailNumber"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="unread" />
+
+            <ProgressRing
+                Width="16"
+                Height="16"
+                Margin="6"
+                VerticalAlignment="Bottom"
+                IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
+                RelativePanel.RightOf="UnreadMailText" />
 
             <HyperlinkButton
                 x:Name="GoToOutlookDotComButton"
