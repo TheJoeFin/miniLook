@@ -6,8 +6,8 @@
     xmlns:local="using:miniLook"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:windowex="using:WinUIEx"
-    Width="200"
-    Height="300"
+    Width="300"
+    Height="500"
     Activated="WindowEx_Activated"
     PersistenceId="MainWindow"
     mc:Ignorable="d">
