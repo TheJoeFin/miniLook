@@ -211,9 +211,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 // TODO: here the message changes read status, but the UI is not updating now
                 if (message.AdditionalData is null && message.IsRead is not null)
                 {
-                    Message? changedMessage = MailItems.FirstOrDefault(message => message.Id == message.Id);
+                    Message? changedMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
                     if (changedMessage is not null)
+                    {
+                        int index = MailItems.IndexOf(changedMessage);
+                        MailItems.RemoveAt(index);
                         changedMessage.IsRead = message.IsRead;
+                        MailItems.Insert(index, changedMessage);
+                    }
 
                     continue;
                 }
