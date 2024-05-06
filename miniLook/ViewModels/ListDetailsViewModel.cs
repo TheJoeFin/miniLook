@@ -31,6 +31,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private bool isLoadingContent = false;
 
+    [ObservableProperty]
+    private DateTime lastSync = DateTime.MinValue;
+
     public ObservableCollection<Message> MailItems { get; private set; } = [];
 
     public ObservableCollection<Event> Events { get; private set; } = [];
@@ -234,6 +237,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             deltaLink = outDeltaLink;
 
         isSyncingMail = false;
+        LastSync = DateTime.Now;
         DebugText += $"\nMail synced";
     }
 

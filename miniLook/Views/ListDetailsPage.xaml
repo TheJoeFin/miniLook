@@ -94,7 +94,8 @@
                 VerticalAlignment="Center"
                 RelativePanel.RightOf="UnreadMailNumber"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="unread" />
+                Text="unread"
+                ToolTipService.ToolTip="{x:Bind ViewModel.LastSync, Mode=OneWay, Converter={StaticResource stringFormatConverter}, ConverterParameter='{}Last Sync at {0:t}'}" />
 
             <ProgressRing
                 Width="16"
