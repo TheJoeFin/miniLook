@@ -21,6 +21,17 @@
                 TextWrapping="WrapWholeWords" />
 
             <HyperlinkButton
+                x:Name="ArchiveHyperlinkButton"
+                Click="ArchiveHyperlinkButton_Click"
+                IsEnabled="False"
+                ToolTipService.ToolTip="Coming Soon!">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                    <TextBlock Text="Archive" />
+                </StackPanel>
+            </HyperlinkButton>
+
+            <HyperlinkButton
                 x:Name="BrowserLink"
                 Margin="{StaticResource SmallLeftMargin}"
                 HorizontalAlignment="Left"

@@ -28,6 +28,7 @@
                     Margin="-6,0,-4,0"
                     Background="{ThemeResource AccentFillColorDefaultBrush}"
                     CornerRadius="5"
+                    ToolTipService.ToolTip="This mail is Unread"
                     Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
                 <StackPanel
                     Grid.Column="1"

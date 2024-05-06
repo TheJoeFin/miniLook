@@ -38,4 +38,9 @@ public sealed partial class ListDetailsDetailControl : UserControl
         // Launch the URI
         _ = Launcher.LaunchUriAsync(new Uri(ListDetailsMenuItem.WebLink));
     }
+
+    private void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        // TODO set up archiving a mail
+    }
 }
