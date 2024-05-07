@@ -72,8 +72,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         Debug.WriteLine("Checking for new mail");
         IsLoadingContent = true;
-        await SyncMail();
         await GetEvents();
+        await SyncMail();
 
         IsLoadingContent = false;
         checkTimer.Start();
@@ -160,8 +160,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         User me = await _graphClient.Me.Request().GetAsync();
         AccountName = me.DisplayName;
 
-        await SyncMail();
         await GetEvents();
+        await SyncMail();
 
         IsLoadingContent = false;
 
