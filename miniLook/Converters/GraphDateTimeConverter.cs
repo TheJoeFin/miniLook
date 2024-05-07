@@ -7,16 +7,24 @@ internal class GraphDateTimeConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, string language)
     {
-        if (value is not string valString)
+        if (value is not Event graphEvent)
             return string.Empty;
 
-        DateTimeOffset dto = DateTimeOffset.Parse(valString);
-        dto = dto.ToLocalTime();
+        DateTimeOffset dtoStart = DateTimeOffset.Parse(graphEvent.Start.DateTime.ToString());
+        dtoStart = dtoStart.ToLocalTime();
 
-        if ((dto - DateTimeOffset.Now).TotalHours < 3)
-            return $"{dto.Humanize()} at {dto:hh:mm}";
+        DateTimeOffset dtoEnd = DateTimeOffset.Parse(graphEvent.End.DateTime.ToString());
+        dtoEnd = dtoEnd.ToLocalTime();
+
+        DateTimeOffset now = DateTimeOffset.Now.LocalDateTime;
+
+        if (now < dtoEnd && now > dtoStart)
+            return "Now";
+
+        if ((dtoStart - DateTimeOffset.Now).TotalHours < 3)
+            return $"{dtoStart.Humanize()} at {dtoStart:hh:mm}";
         else
-            return dto.ToString("dddd hh:mmt");
+            return dtoStart.ToString("dddd hh:mmt");
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, string language)

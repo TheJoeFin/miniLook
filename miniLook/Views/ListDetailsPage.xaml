@@ -189,7 +189,7 @@
                             <TextBlock
                                 Grid.Row="1"
                                 VerticalAlignment="Center"
-                                Text="{x:Bind Start.DateTime, Converter={StaticResource graphDateConverter}}" />
+                                Text="{x:Bind Converter={StaticResource graphDateConverter}}" />
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
