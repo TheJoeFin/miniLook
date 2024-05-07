@@ -8,7 +8,7 @@
     xmlns:graph="using:Microsoft.Graph"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:miniConverters="using:miniLook.Converters"
-    xmlns:models="using:miniLook.Core.Models"
+    xmlns:models="using:miniLook.Models"
     xmlns:views="using:miniLook.Views"
     mc:Ignorable="d">
     <Page.Resources>
@@ -16,7 +16,7 @@
         <converters:StringFormatConverter x:Key="stringFormatConverter" />
         <miniConverters:GraphDateTimeConverter x:Key="graphDateConverter" />
 
-        <DataTemplate x:Key="ItemTemplate" x:DataType="graph:Message">
+        <DataTemplate x:Key="ItemTemplate" x:DataType="models:MailData">
             <Grid Height="60">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -35,7 +35,7 @@
                     Margin="{StaticResource SmallLeftMargin}"
                     VerticalAlignment="Center">
                     <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Subject}" />
-                    <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind From.EmailAddress.Address}" />
+                    <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
                 </StackPanel>
             </Grid>
         </DataTemplate>

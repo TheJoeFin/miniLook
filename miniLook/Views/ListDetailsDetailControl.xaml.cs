@@ -1,21 +1,19 @@
-﻿using Microsoft.Graph;
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-
-using miniLook.Core.Models;
+using miniLook.Models;
 using Windows.System;
 
 namespace miniLook.Views;
 
 public sealed partial class ListDetailsDetailControl : UserControl
 {
-    public Message? ListDetailsMenuItem
+    public MailData? ListDetailsMenuItem
     {
-        get => GetValue(ListDetailsMenuItemProperty) as Message;
+        get => GetValue(ListDetailsMenuItemProperty) as MailData;
         set => SetValue(ListDetailsMenuItemProperty, value);
     }
 
-    public static readonly DependencyProperty ListDetailsMenuItemProperty = DependencyProperty.Register("ListDetailsMenuItem", typeof(Message), typeof(ListDetailsDetailControl), new PropertyMetadata(null, OnListDetailsMenuItemPropertyChanged));
+    public static readonly DependencyProperty ListDetailsMenuItemProperty = DependencyProperty.Register("ListDetailsMenuItem", typeof(MailData), typeof(ListDetailsDetailControl), new PropertyMetadata(null, OnListDetailsMenuItemPropertyChanged));
 
     public ListDetailsDetailControl()
     {

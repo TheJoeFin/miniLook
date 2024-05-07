@@ -8,6 +8,7 @@ using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.UI.Xaml;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
+using miniLook.Models;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -34,7 +35,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private DateTime lastSync = DateTime.MinValue;
 
-    public ObservableCollection<Message> MailItems { get; private set; } = [];
+    public ObservableCollection<MailData> MailItems { get; private set; } = [];
 
     public ObservableCollection<Event> Events { get; private set; } = [];
 
@@ -198,25 +199,25 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         {
             foreach (Message message in currentPageOfMessages)
             {
+                MailData newMail = new(message);
                 if (message.AdditionalData is not null 
                     && message.AdditionalData.TryGetValue("@removed", out object? removed))
                 {
-                    Message? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
+                    MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
                     if (matchingMessage is not null)
                         MailItems.Remove(matchingMessage);
 
                     continue;
                 }
 
-                // TODO: here the message changes read status, but the UI is not updating now
                 if (message.AdditionalData is null && message.IsRead is not null)
                 {
-                    Message? changedMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
+                    MailData? changedMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
                     if (changedMessage is not null)
                     {
                         int index = MailItems.IndexOf(changedMessage);
                         MailItems.RemoveAt(index);
-                        changedMessage.IsRead = message.IsRead;
+                        changedMessage.IsRead = (bool)message.IsRead;
                         MailItems.Insert(index, changedMessage);
                     }
 
@@ -225,9 +226,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
 
                 if (MailItems.Count == 0 || MailItems.First().ReceivedDateTime < message.ReceivedDateTime)
-                    MailItems.Insert(0, message);
+                    MailItems.Insert(0, newMail);
                 else
-                    MailItems.Add(message);
+                    MailItems.Add(newMail);
             }
 
             previousPage = currentPageOfMessages;

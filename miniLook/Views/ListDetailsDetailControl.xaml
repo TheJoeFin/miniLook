@@ -47,7 +47,7 @@
                 <TextBlock
                     IsTextSelectionEnabled="True"
                     Style="{StaticResource DetailBodyBaseMediumStyle}"
-                    Text="{x:Bind ListDetailsMenuItem.From.EmailAddress.Address, Mode=OneWay}" />
+                    Text="{x:Bind ListDetailsMenuItem.Sender, Mode=OneWay}" />
 
                 <TextBlock
                     Margin="{StaticResource SmallTopMargin}"
@@ -65,7 +65,7 @@
                 <TextBlock
                     IsTextSelectionEnabled="True"
                     Style="{StaticResource DetailBodyBaseMediumStyle}"
-                    Text="{x:Bind ListDetailsMenuItem.BodyPreview, Mode=OneWay}" />
+                    Text="{x:Bind ListDetailsMenuItem.Body, Mode=OneWay}" />
 
             </StackPanel>
         </StackPanel>
