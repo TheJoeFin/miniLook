@@ -14,6 +14,8 @@ internal class MailCacheService : IMailCacheService
         _localSettingsService = localSettingsService;
     }
 
+    public object? DeltaLink => throw new NotImplementedException();
+
     public async Task ClearMailCacheAsync()
     {
         await _localSettingsService.SaveSettingAsync(SettingsKey, string.Empty);
@@ -32,6 +34,16 @@ internal class MailCacheService : IMailCacheService
             return [];
 
         return mailData;
+    }
+
+    public Task InitializeAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task SaveDeltaLink(object? deltaLink)
+    {
+        throw new NotImplementedException();
     }
 
     public async Task SaveEmailsAsync(IEnumerable<MailData> allMailData)
