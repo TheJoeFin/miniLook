@@ -23,6 +23,10 @@ internal class GraphDateTimeConverter : IValueConverter
 
         if ((dtoStart - DateTimeOffset.Now).TotalHours < 3)
             return $"{dtoStart.Humanize()} at {dtoStart:hh:mm}";
+        else if (dtoStart.Date == now.Date)
+            return $"Today at {dtoStart:hh:mmt}";
+        else if (dtoStart.Date == now.Date.AddDays(1))
+            return $"Tomorrow at {dtoStart:hh:mmt}";
         else
             return dtoStart.ToString("dddd hh:mmt");
     }
