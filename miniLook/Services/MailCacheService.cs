@@ -1,11 +1,14 @@
 ﻿using miniLook.Contracts.Services;
 using miniLook.Models;
 using System.Text.Json;
+using Windows.Storage;
 
 namespace miniLook.Services;
 internal class MailCacheService : IMailCacheService
 {
-    private const string SettingsKey = "MailCacheJson";
+    private const string MailCacheFileName = "MailCacheJson.json";
+
+    private const string DeltaLinkKey = "MailCacheDeltaLink";
 
     private readonly ILocalSettingsService _localSettingsService;
 
@@ -14,16 +17,31 @@ internal class MailCacheService : IMailCacheService
         _localSettingsService = localSettingsService;
     }
 
-    public object? DeltaLink => throw new NotImplementedException();
+    public string? DeltaLink { get; set; }
 
     public async Task ClearMailCacheAsync()
     {
-        await _localSettingsService.SaveSettingAsync(SettingsKey, string.Empty);
+        StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
+        StorageFile cacheFile = await localCacheFolder.GetFileAsync(MailCacheFileName);
+        await cacheFile.DeleteAsync();
     }
 
     public async Task<IEnumerable<MailData>> GetEmailsAsync()
     {
-        string? rawJson = await _localSettingsService.ReadSettingAsync<string>(SettingsKey);
+        StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
+        StorageFile cacheFile;
+
+        try
+        {
+            cacheFile = await localCacheFolder.GetFileAsync(MailCacheFileName);
+        }
+        catch (FileNotFoundException)
+        {
+            return [];
+        }
+
+        using TextReader textReader = new StreamReader(await cacheFile.OpenStreamForReadAsync());
+        string? rawJson = textReader.ReadToEnd();
 
         if (string.IsNullOrEmpty(rawJson))
             return [];
@@ -36,19 +54,25 @@ internal class MailCacheService : IMailCacheService
         return mailData;
     }
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        throw new NotImplementedException();
+        DeltaLink = await _localSettingsService.ReadSettingAsync<string?>(DeltaLinkKey);
     }
 
-    public Task SaveDeltaLink(object? deltaLink)
+    public async Task SaveDeltaLink(string? deltaLink)
     {
-        throw new NotImplementedException();
+        DeltaLink = deltaLink;
+        await _localSettingsService.SaveSettingAsync(DeltaLinkKey, deltaLink);
     }
 
     public async Task SaveEmailsAsync(IEnumerable<MailData> allMailData)
     {
         string json = JsonSerializer.Serialize(allMailData);
-        await _localSettingsService.SaveSettingAsync(SettingsKey, json);
+
+        StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
+        StorageFile cacheFile = await localCacheFolder.CreateFileAsync(MailCacheFileName, CreationCollisionOption.ReplaceExisting);
+
+        using TextWriter textWriter = new StreamWriter(await cacheFile.OpenStreamForWriteAsync());
+        textWriter.Write(json);
     }
 }

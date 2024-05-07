@@ -5,9 +5,9 @@ public interface IMailCacheService
 {
     Task InitializeAsync();
 
-    object? DeltaLink { get; }
+    string? DeltaLink { get; set; }
 
-    Task SaveDeltaLink(object? deltaLink);
+    Task SaveDeltaLink(string? deltaLink);
 
     Task<IEnumerable<MailData>> GetEmailsAsync();
 

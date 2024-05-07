@@ -51,9 +51,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private INavigationService NavigationService { get; }
 
-    public ListDetailsViewModel(INavigationService navigationService)
+    private IMailCacheService MailCacheService { get; }
+
+    public ListDetailsViewModel(INavigationService navigationService, IMailCacheService mailCacheService)
     {
         NavigationService = navigationService;
+        MailCacheService = mailCacheService;
     }
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -97,7 +100,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         await EstablishGraph();
 
-        TryToLoadMail();
+        await TryToLoadMail();
     }
 
     [RelayCommand]
@@ -107,13 +110,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
-    private void Refresh()
+    private async Task Refresh()
     {
-        ClearOutContents();
-        TryToLoadMail();
+        await ClearOutContents();
+        await TryToLoadMail();
     }
 
-    private void ClearOutContents()
+    private async Task ClearOutContents()
     {
         MailItems.Clear();
         Events.Clear();
@@ -122,12 +125,18 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         deltaLink = null;
         previousPage = null;
+
+        MailCacheService.DeltaLink = null;
+        await MailCacheService.ClearMailCacheAsync();
+        await MailCacheService.SaveDeltaLink(null);
+
+        loadedMail = false;
     }
 
     [RelayCommand]
     private async Task SignOut()
     {
-        ClearOutContents();
+        await ClearOutContents();
         await ProviderManager.Instance.GlobalProvider?.SignOutAsync();
     }
 
@@ -144,8 +153,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NavigationService.NavigateTo(typeof(SettingsViewModel).FullName!);
     }
 
-    private async void TryToLoadMail()
+    private async Task TryToLoadMail()
     {
+        if (loadedMail)
+            return;
+
         loadedMail = true;
 
         DebugText += $"\nTrying to load mail";
@@ -158,6 +170,16 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         _graphClient = provider.GetClient();
 
         IsLoadingContent = true;
+
+        await MailCacheService.InitializeAsync();
+
+        IEnumerable<MailData> tempMailItems = await MailCacheService.GetEmailsAsync();
+
+        foreach (MailData mail in tempMailItems)
+            MailItems.Add(mail);
+
+        deltaLink = MailCacheService.DeltaLink;
+
         User me = await _graphClient.Me.Request().GetAsync();
         AccountName = me.DisplayName;
 
@@ -165,6 +187,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         await SyncMail();
 
         IsLoadingContent = false;
+        await MailCacheService.SaveEmailsAsync(MailItems);
 
         checkTimer.Start();
     }
@@ -182,8 +205,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         IMessageDeltaCollectionPage currentPageOfMessages;
 
-        if (previousPage is not null && deltaLink is not null)
+        if (deltaLink is not null)
         {
+            previousPage ??= new MessageDeltaCollectionPage();
+
             previousPage.InitializeNextPageRequest(_graphClient, deltaLink.ToString());
             currentPageOfMessages = await previousPage.NextPageRequest.GetAsync();
         }
@@ -240,7 +265,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         bool successInGettingDeltaLink = currentPageOfMessages?.AdditionalData.TryGetValue("@odata.deltaLink", out outDeltaLink) is true;
 
         if (successInGettingDeltaLink)
+        {
             deltaLink = outDeltaLink;
+            await MailCacheService.SaveDeltaLink(deltaLink?.ToString());
+        }
 
         isSyncingMail = false;
         LastSync = DateTime.Now;
@@ -302,7 +330,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public void OnNavigatedFrom()
     {
-        ClearOutContents();
+        loadedMail = false;
     }
 
     private async Task EstablishGraph()
@@ -339,13 +367,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             await provider.SignInAsync();
     }
 
-    private void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
+    private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
     {
         DebugText += $"\nProvider state changed to {args.NewState}";
         if (args.NewState != ProviderState.SignedIn || ProviderManager.Instance.GlobalProvider is not IProvider provider)
             return;
 
         if (!loadedMail && provider?.State == ProviderState.SignedIn)
-            TryToLoadMail();
+            await TryToLoadMail();
     }
 }
