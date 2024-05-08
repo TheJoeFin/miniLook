@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
 using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.ApplicationModel.Resources;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
@@ -349,7 +350,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
         }
 
-        string clientId = Environment.GetEnvironmentVariable("miniLookId", EnvironmentVariableTarget.User) ?? string.Empty;
+        ResourceManager resourceManager = new();
+        ResourceMap resourceMap = resourceManager.MainResourceMap.GetSubtree("OAuth");
+        ResourceContext resourceContext = resourceManager.CreateResourceContext();
+        string clientId = resourceMap.GetValue("ClientId", resourceContext).ValueAsString;
+
+        if (string.IsNullOrEmpty(clientId))
+            throw new Exception("Client ID not set");
+
         string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
         DebugText += $"\nScopes and clientID set";
 
