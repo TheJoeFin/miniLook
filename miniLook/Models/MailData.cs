@@ -1,12 +1,15 @@
-﻿using Microsoft.Graph;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Graph;
 using System.Text.Json.Serialization;
 
 namespace miniLook.Models;
-public class MailData
+
+public partial class MailData: ObservableRecipient
 {
     public string Id { get; set; } = string.Empty;
 
-    public bool IsRead { get; set; } = false;
+    [ObservableProperty]
+    public bool isRead = false;
 
     public string Sender { get; set; } = $"empty@example.com";
 
@@ -48,5 +51,10 @@ public class MailData
             return false;
 
         return Id == mailData.Id;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
     }
 }

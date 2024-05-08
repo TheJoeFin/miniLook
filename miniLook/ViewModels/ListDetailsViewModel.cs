@@ -241,9 +241,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     if (changedMessage is not null)
                     {
                         int index = MailItems.IndexOf(changedMessage);
-                        MailItems.RemoveAt(index);
                         changedMessage.IsRead = (bool)message.IsRead;
-                        MailItems.Insert(index, changedMessage);
                     }
 
                     continue;
@@ -272,7 +270,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         isSyncingMail = false;
         LastSync = DateTime.Now;
-        DebugText += $"\nMail synced";
+        NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
+        DebugText += $"\nMail synced at {LastSync:t}";
     }
 
     private async Task GetEvents()
