@@ -78,6 +78,7 @@
 
             <ToggleButton
                 x:Name="CalendarToggleButton"
+                Width="48"
                 RelativePanel.AlignLeftWithPanel="True"
                 ToolTipService.ToolTip="Show a couple of events in the next couple days">
                 <SymbolIcon Symbol="Calendar" />
