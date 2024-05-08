@@ -138,6 +138,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         await ClearOutContents();
         await ProviderManager.Instance.GlobalProvider?.SignOutAsync();
+        NavigationService.NavigateTo(typeof(WelcomeViewModel).FullName!);
     }
 
     [RelayCommand]

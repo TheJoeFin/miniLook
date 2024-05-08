@@ -171,4 +171,8 @@
   &lt;/actions&gt;
 &lt;/toast&gt;</value>
   </data>
+  <data name="Welcome_Title.Text" xml:space="preserve">
+    <value>Welcome</value>
+    <comment>Page title for WelcomePage</comment>
+  </data>
 </root>
