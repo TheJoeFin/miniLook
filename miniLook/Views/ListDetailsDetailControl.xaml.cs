@@ -94,7 +94,6 @@ public sealed partial class ListDetailsDetailControl : UserControl
         if (ListDetailsMenuItem is null || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
             return;
 
-        ListDetailsMenuItem.IsRead = !ListDetailsMenuItem.IsRead;
         GraphServiceClient _graphClient = provider.GetClient();
         _ = _graphClient.Me
             .MailFolders

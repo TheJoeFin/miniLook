@@ -259,12 +259,19 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     continue;
                 }
 
-                if (MailItems.First().ReceivedDateTime < message.ReceivedDateTime)
-                    MailItems.Insert(0, newMail);
-                else
-                    MailItems.Add(newMail);
+                bool insertedMail = false;
+                for (int i = 0; i < MailItems.Count; i++)
+                {
+                    if (MailItems[i].ReceivedDateTime < message.ReceivedDateTime)
+                    {
+                        MailItems.Insert(i, newMail);
+                        insertedMail = true;
+                        break;
+                    }
+                }
 
-                // TODO find the right spot to insert a new mail item
+                if (!insertedMail)
+                    MailItems.Add(newMail);
             }
 
             previousPage = currentPageOfMessages;
