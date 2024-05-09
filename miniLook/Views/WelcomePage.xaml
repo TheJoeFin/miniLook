@@ -7,23 +7,35 @@
     Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
     mc:Ignorable="d">
 
-    <Grid x:Name="ContentArea">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <StackPanel
+        Grid.Row="1"
+        Padding="24"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Center"
+        Orientation="Vertical"
+        Spacing="12">
+        <Image
+            Width="100"
+            HorizontalAlignment="Center"
+            Source="/Assets/Square150x150Logo.scale-200.png" />
 
         <TextBlock
             x:Uid="Welcome_Title"
             Grid.Row="0"
+            HorizontalAlignment="Center"
             Style="{StaticResource PageTitleStyle}" />
+        <TextBlock
+            x:Uid="Welcome_Description"
+            IsTextSelectionEnabled="True"
+            Style="{StaticResource BodyTextStyle}" />
 
         <Grid Grid.Row="1">
             <Button
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Command="{x:Bind ViewModel.GetSignedInCommand}"
-                Content="Get Logged in!" />
+                Content="Sign in to Microsoft Account"
+                Style="{StaticResource AccentButtonStyle}" />
         </Grid>
-    </Grid>
+    </StackPanel>
 </Page>
