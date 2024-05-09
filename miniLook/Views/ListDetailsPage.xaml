@@ -15,6 +15,7 @@
         <converters:BoolToVisibilityConverter x:Key="boolToVisConverter" />
         <converters:StringFormatConverter x:Key="stringFormatConverter" />
         <miniConverters:GraphDateTimeConverter x:Key="graphDateConverter" />
+        <miniConverters:StringNavigateUriConverter x:Key="stringUriConverter" />
 
         <DataTemplate x:Key="ItemTemplate" x:DataType="models:MailData">
             <Grid Height="60">
@@ -80,6 +81,8 @@
                 x:Name="CalendarToggleButton"
                 Width="48"
                 RelativePanel.AlignLeftWithPanel="True"
+                RelativePanel.AlignVerticalCenterWithPanel="True"
+                Style="{StaticResource DefaultToggleButtonStyle}"
                 ToolTipService.ToolTip="Show a couple of events in the next couple days">
                 <SymbolIcon Symbol="Calendar" />
             </ToggleButton>
@@ -88,12 +91,14 @@
                 x:Name="UnreadMailNumber"
                 Padding="10,0,6,0"
                 VerticalAlignment="Center"
+                RelativePanel.AlignVerticalCenterWithPanel="True"
                 RelativePanel.RightOf="CalendarToggleButton"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
             <TextBlock
                 x:Name="UnreadMailText"
                 VerticalAlignment="Center"
+                RelativePanel.AlignVerticalCenterWithPanel="True"
                 RelativePanel.RightOf="UnreadMailNumber"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="unread"
@@ -105,18 +110,30 @@
                 Margin="6"
                 VerticalAlignment="Bottom"
                 IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
+                RelativePanel.AlignVerticalCenterWithPanel="True"
                 RelativePanel.RightOf="UnreadMailText" />
 
             <HyperlinkButton
                 x:Name="GoToOutlookDotComButton"
                 Command="{x:Bind ViewModel.GoToOutlookCommand}"
+                RelativePanel.AlignVerticalCenterWithPanel="True"
                 RelativePanel.LeftOf="MoreButton"
                 ToolTipService.ToolTip="Go To Outlook.com">
-                <FontIcon Glyph="&#xE8A7;" />
+                <Viewbox Height="16">
+                    <FontIcon Glyph="&#xE8A7;" />
+                </Viewbox>
             </HyperlinkButton>
-            <Button x:Name="MoreButton" RelativePanel.AlignRightWithPanel="True">
+            <Button
+                x:Name="MoreButton"
+                Height="30"
+                RelativePanel.AlignRightWithPanel="True"
+                Style="{StaticResource CommandBarFlyoutEllipsisButtonStyle}">
                 <Button.Content>
-                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE712;" />
+                    <FontIcon
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontFamily="Segoe Fluent Icons"
+                        Glyph="&#xE712;" />
                 </Button.Content>
                 <Button.Flyout>
                     <MenuFlyout>
@@ -182,6 +199,14 @@
                             Grid.Row="1"
                             HorizontalAlignment="Left"
                             Orientation="Horizontal">
+                            <HyperlinkButton
+                                NavigateUri="{x:Bind OnlineMeetingUrl, Converter={StaticResource stringUriConverter}}"
+                                ToolTipService.ToolTip="Online meeting link"
+                                Visibility="{x:Bind IsOnlineMeeting.Value, Converter={StaticResource boolToVisConverter}}">
+                                <Viewbox Height="14">
+                                    <SymbolIcon Symbol="Globe" />
+                                </Viewbox>
+                            </HyperlinkButton>
                             <HyperlinkButton NavigateUri="{x:Bind WebLink}" ToolTipService.ToolTip="See this event on Outlook.com">
                                 <Viewbox Height="14">
                                     <FontIcon Glyph="&#xE8AD;" />

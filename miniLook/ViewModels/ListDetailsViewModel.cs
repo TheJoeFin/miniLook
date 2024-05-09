@@ -1,19 +1,15 @@
 ﻿using CommunityToolkit.Authentication;
-using CommunityToolkit.Authentication.Extensions;
 using CommunityToolkit.Graph.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
-using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.UI.Xaml;
-using Microsoft.Windows.ApplicationModel.Resources;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using Windows.Storage;
 
 namespace miniLook.ViewModels;
 
@@ -102,7 +98,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         checkTimer.Interval = TimeSpan.FromSeconds(10);
         checkTimer.Tick += CheckTimer_Tick;
 
-        await EstablishGraph();
         await TryToLoadMail();
     }
 
@@ -148,7 +143,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private async Task SignIn()
     {
         ProviderManager.Instance.GlobalProvider = null;
-        await EstablishGraph();
+        await GraphService.SignInAsync();
     }
 
     [RelayCommand]
@@ -229,7 +224,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             foreach (Message message in currentPageOfMessages)
             {
                 MailData newMail = new(message);
-                if (message.AdditionalData is not null 
+                if (message.AdditionalData is not null
                     && message.AdditionalData.TryGetValue("@removed", out object? removed))
                 {
                     MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
@@ -340,16 +335,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     public void OnNavigatedFrom()
     {
         loadedMail = false;
-    }
-
-    private async Task EstablishGraph()
-    {
-        DebugText += $"\nEstablishing Graph";
-        if (ProviderManager.Instance.GlobalProvider != null)
-        {
-            DebugText += $"\nGlobal Provider not null";
-            return;
-        }
     }
 
     private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
