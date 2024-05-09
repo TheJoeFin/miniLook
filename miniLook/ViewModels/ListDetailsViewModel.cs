@@ -54,10 +54,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private IMailCacheService MailCacheService { get; }
 
-    public ListDetailsViewModel(INavigationService navigationService, IMailCacheService mailCacheService)
+    private IGraphService GraphService { get; }
+
+    public ListDetailsViewModel(INavigationService navigationService, IMailCacheService mailCacheService, IGraphService graphService)
     {
         NavigationService = navigationService;
         MailCacheService = mailCacheService;
+        GraphService = graphService;
     }
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -100,7 +103,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         checkTimer.Tick += CheckTimer_Tick;
 
         await EstablishGraph();
-
         await TryToLoadMail();
     }
 
@@ -313,7 +315,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 .Top(3)
                 .GetAsync();
 
-
         // check to see if any events are different:
         bool eventsChanged = false;
         for (int i = 0; i < events.Count; i++)
@@ -349,37 +350,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             DebugText += $"\nGlobal Provider not null";
             return;
         }
-
-        ResourceManager resourceManager = new();
-        ResourceMap resourceMap = resourceManager.MainResourceMap.GetSubtree("OAuth");
-        ResourceContext resourceContext = resourceManager.CreateResourceContext();
-        string clientId = resourceMap.GetValue("ClientId", resourceContext).ValueAsString;
-
-        if (string.IsNullOrEmpty(clientId))
-            throw new Exception("Client ID not set");
-
-        string[] scopes = ["User.Read", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
-        DebugText += $"\nScopes and clientID set";
-
-        MsalProvider provider = new(clientId, scopes, null, false, true);
-
-        string cacheFileName = "msal_cache.dat";
-        string cacheDirectory = ApplicationData.Current.LocalCacheFolder.Path;
-        // Configure the token cache storage for non-UWP applications.
-        // https://github.com/AzureAD/microsoft-authentication-extensions-for-dotnet/wiki/Cross-platform-Token-Cache
-        // https://github.com/Richasy/Graph-Controls/tree/main/Samples/ManualGraphRequestSample
-        StorageCreationProperties storageProperties = new StorageCreationPropertiesBuilder(
-            cacheFileName, cacheDirectory).Build();
-        await provider.InitTokenCacheAsync(storageProperties);
-
-        ProviderManager.Instance.GlobalProvider = provider;
-
-        bool silentSuccess = await provider.TrySilentSignInAsync();
-
-        DebugText += $"\nSilentSignIn success {silentSuccess}";
-
-        if (!silentSuccess)
-            await provider.SignInAsync();
     }
 
     private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)

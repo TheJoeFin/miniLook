@@ -63,6 +63,7 @@ public partial class App : Application
             services.AddSingleton<IPageService, PageService>();
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IMailCacheService, MailCacheService>();
+            services.AddSingleton<IGraphService, GraphService>();
 
             // Core Services
             services.AddSingleton<ISampleDataService, SampleDataService>();
