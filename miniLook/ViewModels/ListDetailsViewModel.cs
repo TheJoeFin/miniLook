@@ -61,10 +61,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
+        UpdateItems();
     }
 
-    private async void CheckTimer_Tick(object? sender, object e)
+    public void UpdateItems()
+    {
+        NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
+        if (!IsLoadingContent)
+            CheckTimer_Tick(null, null);
+    }
+
+    private async void CheckTimer_Tick(object? sender, object? e)
     {
         DebugText += $"\n{DateTime.Now.ToShortTimeString()}: Check new timer tick";
         checkTimer.Stop();
@@ -272,6 +279,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         {
             deltaLink = outDeltaLink;
             await MailCacheService.SaveDeltaLink(deltaLink?.ToString());
+            await MailCacheService.SaveEmailsAsync(MailItems);
         }
 
         isSyncingMail = false;

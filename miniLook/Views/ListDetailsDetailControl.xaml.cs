@@ -1,6 +1,11 @@
-﻿using Microsoft.UI.Xaml;
+﻿using CommunityToolkit.Authentication;
+using CommunityToolkit.Graph.Extensions;
+using Microsoft.Graph;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using miniLook.Helpers;
 using miniLook.Models;
+using System.Windows.Media;
 using Windows.System;
 
 namespace miniLook.Views;
@@ -37,8 +42,67 @@ public sealed partial class ListDetailsDetailControl : UserControl
         _ = Launcher.LaunchUriAsync(new Uri(ListDetailsMenuItem.WebLink));
     }
 
-    private void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    private void TryUpdateParent()
     {
-        // TODO set up archiving a mail
+        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
+        if (parentListPage is null)
+            return;
+
+        parentListPage.ViewModel.UpdateItems();
+    }
+
+    private async void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ListDetailsMenuItem is null || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
+            return;
+
+        GraphServiceClient _graphClient = provider.GetClient();
+
+        MailFolder? archiveFolder = _graphClient.Me
+            .MailFolders
+            .Request()
+            .Filter("displayName eq 'Archive'")
+            .GetAsync()
+            .Result
+            .FirstOrDefault();
+
+        if (archiveFolder is null)
+            return;
+
+        try
+        {
+            _ = await _graphClient.Me
+                .MailFolders
+                .Inbox
+                .Messages[ListDetailsMenuItem.Id]
+                .Move(archiveFolder.Id)
+                .Request()
+                .PostAsync();
+        }
+        catch (Exception)
+        {
+#if DEBUG
+            throw;
+#endif
+        }
+
+        TryUpdateParent();
+    }
+
+    private void ReadUnreadHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ListDetailsMenuItem is null || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
+            return;
+
+        ListDetailsMenuItem.IsRead = !ListDetailsMenuItem.IsRead;
+        GraphServiceClient _graphClient = provider.GetClient();
+        _ = _graphClient.Me
+            .MailFolders
+            .Inbox
+            .Messages[ListDetailsMenuItem.Id]
+            .Request()
+            .UpdateAsync(new Message { IsRead = !ListDetailsMenuItem.IsRead });
+
+        TryUpdateParent();
     }
 }

@@ -20,16 +20,27 @@
                 Text="{x:Bind ListDetailsMenuItem.Subject, Mode=OneWay}"
                 TextWrapping="WrapWholeWords" />
 
-            <HyperlinkButton
-                x:Name="ArchiveHyperlinkButton"
-                Click="ArchiveHyperlinkButton_Click"
-                IsEnabled="False"
-                ToolTipService.ToolTip="Coming Soon!">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <FontIcon FontSize="14" Glyph="&#xE7B8;" />
-                    <TextBlock Text="Archive" />
-                </StackPanel>
-            </HyperlinkButton>
+            <StackPanel Orientation="Horizontal">
+                <HyperlinkButton
+                    x:Name="ReadUnreadHyperlinkButton"
+                    Click="ReadUnreadHyperlinkButton_Click"
+                    ToolTipService.ToolTip="Toggle read/unread">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                        <TextBlock Text="Read/Unread" />
+                    </StackPanel>
+                </HyperlinkButton>
+
+                <HyperlinkButton
+                    x:Name="ArchiveHyperlinkButton"
+                    Click="ArchiveHyperlinkButton_Click"
+                    ToolTipService.ToolTip="Archive this item">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                        <TextBlock Text="Archive" />
+                    </StackPanel>
+                </HyperlinkButton>
+            </StackPanel>
 
             <HyperlinkButton
                 x:Name="BrowserLink"
@@ -38,6 +49,7 @@
                 VerticalAlignment="Center"
                 Click="BrowserLink_Click"
                 Content="See this email in Outlook in a browser" />
+
             <StackPanel Padding="0,15,0,0">
                 <TextBlock
                     IsTextSelectionEnabled="True"
