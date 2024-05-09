@@ -176,7 +176,7 @@
     <comment>Page title for WelcomePage</comment>
   </data>
   <data name="Welcome_Description.Text" xml:space="preserve">
-    <value>The principles of this app are to be small and simple. Keep an eye on email and the next few events without dedicating a sizable chunk of your RAM.
+    <value>The principles of this app are to be small and simple. Keep an eye on email and your next few events without dedicating a sizable chunk of your RAM.
 
 If you have any feedback please reach out to joe@JoeFinApps.com
 </value>

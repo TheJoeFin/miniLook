@@ -9,7 +9,7 @@
 
     <StackPanel
         Grid.Row="1"
-        Padding="24"
+        Padding="24,6,24,80"
         HorizontalAlignment="Stretch"
         VerticalAlignment="Center"
         Orientation="Vertical"
