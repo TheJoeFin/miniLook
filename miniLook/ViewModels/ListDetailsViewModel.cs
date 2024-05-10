@@ -270,11 +270,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     return;
                 }
 
+                MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
                 MailData newMail = new(message);
                 if (message.AdditionalData is not null
                     && message.AdditionalData.TryGetValue("@removed", out object? removed))
                 {
-                    MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
                     if (matchingMessage is not null)
                         MailItems.Remove(matchingMessage);
 
@@ -283,11 +283,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
                 if (message.AdditionalData is null && message.IsRead is not null)
                 {
-                    MailData? changedMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
-                    if (changedMessage is not null)
+                    if (matchingMessage is not null)
                     {
-                        int index = MailItems.IndexOf(changedMessage);
-                        changedMessage.IsRead = (bool)message.IsRead;
+                        int index = MailItems.IndexOf(matchingMessage);
+                        matchingMessage.IsRead = (bool)message.IsRead;
                     }
 
                     continue;
@@ -298,6 +297,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     MailItems.Add(newMail);
                     continue;
                 }
+
+                if (matchingMessage is not null)
+                    continue;
 
                 bool insertedMail = false;
                 for (int i = 0; i < MailItems.Count; i++)
