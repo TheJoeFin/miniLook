@@ -26,6 +26,7 @@
             Style="{StaticResource PageTitleStyle}" />
         <TextBlock
             x:Uid="Welcome_Description"
+            MaxWidth="460"
             IsTextSelectionEnabled="True"
             Style="{StaticResource BodyTextStyle}" />
 

@@ -42,6 +42,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private object? deltaLink = null;
     private IMessageDeltaCollectionPage? previousPage = null;
     private bool isSyncingMail = false;
+    private bool isSigningOut = false;
 
     [ObservableProperty]
     private string debugText = $"debug text\n{DateTime.Now.ToShortDateString()}\n{DateTime.Now.ToShortTimeString()}";
@@ -93,6 +94,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     public async void OnNavigatedTo(object parameter)
     {
         DebugText += $"\nNavigated to ListView Detail Page";
+        isSigningOut = false;
         MailItems.Clear();
         Events.Clear();
 
@@ -141,6 +143,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [RelayCommand]
     private async Task SignOut()
     {
+        isSigningOut = true;
         await ClearOutContents();
         await ProviderManager.Instance.GlobalProvider?.SignOutAsync();
         NavigationService.NavigateTo(typeof(WelcomeViewModel).FullName!);
@@ -201,7 +204,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private async Task SyncMail()
     {
         DebugText += $"\nSyncing Mail";
-        if (_graphClient is null || isSyncingMail)
+        if (_graphClient is null
+            || isSigningOut
+            || ProviderManager.Instance.GlobalProvider is not IProvider provider
+            || isSyncingMail)
         {
             DebugText += $"\nGraph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return";
             return;
@@ -220,16 +226,29 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         }
         else
         {
-            currentPageOfMessages = await _graphClient.Me.MailFolders.Inbox.Messages
-            .Delta()
-            .Request()
-            .GetAsync();
+            try
+            {
+                currentPageOfMessages = await _graphClient.Me.MailFolders.Inbox.Messages
+                    .Delta()
+                    .Request()
+                    .GetAsync();
+            }
+            catch (Exception)
+            {
+                return;
+            }
         }
 
         do
         {
             foreach (Message message in currentPageOfMessages)
             {
+                if (isSigningOut)
+                {
+                    isSyncingMail = false;
+                    return;
+                }
+
                 MailData newMail = new(message);
                 if (message.AdditionalData is not null
                     && message.AdditionalData.TryGetValue("@removed", out object? removed))
@@ -298,7 +317,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private async Task GetEvents()
     {
         DebugText += $"\nGetting Events";
-        if (_graphClient is null)
+        if (isSigningOut || _graphClient is null)
         {
             DebugText += $"\nGraph client is null, returning";
             return;
@@ -319,30 +338,37 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             new QueryOption("endDateTime", endOfWeek.ToString("o"))
         ];
 
-        IUserCalendarViewCollectionPage events = await _graphClient.Me.CalendarView.Request(queryOptions)
-                .Header("Prefer", $"outlook.timezone=\"{user.MailboxSettings.TimeZone}\"")
-                .OrderBy("start/dateTime")
-                .Top(3)
-                .GetAsync();
-
-        // check to see if any events are different:
-        bool eventsChanged = false;
-        for (int i = 0; i < events.Count; i++)
+        try
         {
-            if (Events.Count <= i || events[i].Id != Events[i].Id)
+            IUserCalendarViewCollectionPage events = await _graphClient.Me.CalendarView.Request(queryOptions)
+                    .Header("Prefer", $"outlook.timezone=\"{user.MailboxSettings.TimeZone}\"")
+                    .OrderBy("start/dateTime")
+                    .Top(3)
+                    .GetAsync();
+
+            // check to see if any events are different:
+            bool eventsChanged = false;
+            for (int i = 0; i < events.Count; i++)
             {
-                eventsChanged = true;
-                break;
+                if (Events.Count <= i || events[i].Id != Events[i].Id)
+                {
+                    eventsChanged = true;
+                    break;
+                }
             }
+
+            if (!eventsChanged)
+                return;
+
+            Events.Clear();
+
+            foreach (Event ev in events)
+                Events.Add(ev);
         }
-
-        if (!eventsChanged)
+        catch (Exception)
+        {
             return;
-
-        Events.Clear();
-
-        foreach (Event ev in events)
-            Events.Add(ev);
+        }
 
         DebugText += $"\nEvents gotten";
     }
