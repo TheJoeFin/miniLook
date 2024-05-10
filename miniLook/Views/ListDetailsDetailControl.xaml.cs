@@ -1,11 +1,11 @@
 ﻿using CommunityToolkit.Authentication;
 using CommunityToolkit.Graph.Extensions;
+using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using miniLook.Helpers;
 using miniLook.Models;
-using System.Windows.Media;
 using Windows.System;
 
 namespace miniLook.Views;
@@ -35,7 +35,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private void BrowserLink_Click(object sender, RoutedEventArgs e)
     {
-        if (ListDetailsMenuItem is null)
+        if (ListDetailsMenuItem is null || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
         // Launch the URI
@@ -45,7 +45,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
     private void TryUpdateParent()
     {
         ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-        if (parentListPage is null)
+        if (parentListPage is null || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
         parentListPage.ViewModel.UpdateItems();
@@ -53,7 +53,9 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private async void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ListDetailsMenuItem is null || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
+        if (ListDetailsMenuItem is null 
+            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
         GraphServiceClient _graphClient = provider.GetClient();
@@ -91,7 +93,9 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private void ReadUnreadHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ListDetailsMenuItem is null || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
+        if (ListDetailsMenuItem is null
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable
+            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
             return;
 
         GraphServiceClient _graphClient = provider.GetClient();

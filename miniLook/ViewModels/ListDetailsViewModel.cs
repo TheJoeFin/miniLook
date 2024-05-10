@@ -10,6 +10,8 @@ using miniLook.Models;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using CommunityToolkit.WinUI.Helpers;
+
 
 namespace miniLook.ViewModels;
 
@@ -31,6 +33,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     [ObservableProperty]
     private DateTime lastSync = DateTime.MinValue;
+
+    [ObservableProperty]
+    private bool hasInternet = true;
 
     public ObservableCollection<MailData> MailItems { get; private set; } = [];
 
@@ -74,11 +79,18 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async void CheckTimer_Tick(object? sender, object? e)
     {
+        HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
+
         DebugText += $"\n{DateTime.Now.ToShortTimeString()}: Check new timer tick";
         checkTimer.Stop();
         if (_graphClient is null)
         {
             DebugText += $"\nGraph Client is null, returning";
+            checkTimer.Start();
+
+            if (HasInternet)
+                _graphClient = ProviderManager.Instance.GlobalProvider?.GetClient();
+
             return;
         }
 
@@ -97,6 +109,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         isSigningOut = false;
         MailItems.Clear();
         Events.Clear();
+
+        HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
 
         ProviderManager.Instance.ProviderStateChanged -= OnProviderStateChanged;
         ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
@@ -176,8 +190,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
         }
 
-        _graphClient = provider.GetClient();
-
         IsLoadingContent = true;
 
         await MailCacheService.InitializeAsync();
@@ -189,6 +201,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         deltaLink = MailCacheService.DeltaLink;
 
+        if (!HasInternet)
+        {
+            checkTimer.Start();
+            IsLoadingContent = false;
+            return;
+        }
+
+        _graphClient = provider.GetClient();
         User me = await _graphClient.Me.Request().GetAsync();
         AccountName = me.DisplayName;
 
@@ -205,6 +225,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         DebugText += $"\nSyncing Mail";
         if (_graphClient is null
+            || !HasInternet
             || isSigningOut
             || ProviderManager.Instance.GlobalProvider is not IProvider provider
             || isSyncingMail)
@@ -243,7 +264,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         {
             foreach (Message message in currentPageOfMessages)
             {
-                if (isSigningOut)
+                if (isSigningOut || !HasInternet)
                 {
                     isSyncingMail = false;
                     return;
@@ -317,17 +338,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private async Task GetEvents()
     {
         DebugText += $"\nGetting Events";
-        if (isSigningOut || _graphClient is null)
+        if (isSigningOut
+            || !HasInternet
+            || _graphClient is null)
         {
             DebugText += $"\nGraph client is null, returning";
             return;
         }
-
-        // Get the user's mailbox settings to determine
-        // their time zone
-        User user = await _graphClient.Me.Request()
-            .Select(u => new { u.MailboxSettings })
-            .GetAsync();
 
         DateTime now = DateTime.UtcNow;
         DateTime endOfWeek = now.AddDays(2);
@@ -340,6 +357,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         try
         {
+            // Get the user's mailbox settings to determine
+            // their time zone
+            User user = await _graphClient.Me.Request()
+                .Select(u => new { u.MailboxSettings })
+                .GetAsync();
+
             IUserCalendarViewCollectionPage events = await _graphClient.Me.CalendarView.Request(queryOptions)
                     .Header("Prefer", $"outlook.timezone=\"{user.MailboxSettings.TimeZone}\"")
                     .OrderBy("start/dateTime")
