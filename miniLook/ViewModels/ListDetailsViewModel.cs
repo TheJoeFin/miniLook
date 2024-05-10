@@ -131,10 +131,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
-    private async Task Refresh()
+    private void Refresh()
     {
-        await ClearOutContents();
-        await TryToLoadMail();
+        if (!IsLoadingContent)
+            CheckTimer_Tick(null, null);
     }
 
     private async Task ClearOutContents()
