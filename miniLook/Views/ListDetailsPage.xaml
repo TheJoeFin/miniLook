@@ -125,6 +125,20 @@
                 RelativePanel.RightOf="NoNetworkIcon" />
 
             <HyperlinkButton
+                x:Name="SendNewMailButton"
+                Command="{x:Bind ViewModel.GoToSendMailCommand}"
+                RelativePanel.AlignVerticalCenterWithPanel="True"
+                RelativePanel.LeftOf="GoToOutlookDotComButton"
+                ToolTipService.ToolTip="Write a new email">
+                <StackPanel Orientation="Horizontal">
+                    <Viewbox Height="16">
+                        <SymbolIcon Symbol="Mail" />
+                    </Viewbox>
+                    <TextBlock Margin="6,0,0,0" Text="New" />
+                </StackPanel>
+            </HyperlinkButton>
+
+            <HyperlinkButton
                 x:Name="GoToOutlookDotComButton"
                 Command="{x:Bind ViewModel.GoToOutlookCommand}"
                 RelativePanel.AlignVerticalCenterWithPanel="True"

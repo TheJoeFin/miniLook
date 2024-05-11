@@ -125,6 +125,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
+    private void GoToSendMail()
+    {
+        NavigationService.NavigateTo(typeof(SendMailViewModel).FullName!);
+    }
+
+    [RelayCommand]
     private static void GoToOutlook()
     {
         _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://outlook.live.com/mail/0/"));

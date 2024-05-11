@@ -18,6 +18,7 @@ public class PageService : IPageService
         Configure<ListDetailsViewModel, ListDetailsPage>();
         Configure<SettingsViewModel, SettingsPage>();
         Configure<WelcomeViewModel, WelcomePage>();
+        Configure<SendMailViewModel, SendMailPage>();
     }
 
     public Type GetPageType(string key)
