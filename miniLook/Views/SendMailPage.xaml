@@ -4,9 +4,18 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:graph="using:Microsoft.Graph"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toolKitConverters="using:CommunityToolkit.WinUI.UI.Converters"
     Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <toolKitConverters:CollectionVisibilityConverter
+            x:Key="EmptyCollection"
+            EmptyValue="False"
+            NotEmptyValue="True" />
+    </Page.Resources>
 
     <Grid x:Name="ContentArea">
         <Grid.RowDefinitions>
@@ -15,8 +24,6 @@
             <RowDefinition Height="auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-
 
         <StackPanel Orientation="Horizontal">
             <Button
@@ -34,16 +41,37 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="auto" />
             </Grid.ColumnDefinitions>
-            <TextBox
-                x:Name="RecipientTextBox"
+
+            <controls:TokenizingTextBox
+                x:Name="RecipientTokenizingTextBox"
                 Grid.Row="1"
-                HorizontalAlignment="Stretch"
-                PlaceholderText="To"
-                Text="{x:Bind ViewModel.Recipient, Mode=TwoWay}" />
+                ItemClick="{x:Bind ViewModel.ClickedItem}"
+                ItemsSource="{x:Bind ViewModel.EmailAddresses, Mode=TwoWay}"
+                SuggestedItemsSource="{x:Bind ViewModel.SuggestedRecipients}"
+                TextMemberPath="Text"
+                TokenDelimiter=";">
+                <controls:TokenizingTextBox.SuggestedItemTemplate>
+                    <DataTemplate x:DataType="graph:EmailAddress">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{x:Bind Name}" />
+                            <TextBlock Text="{x:Bind Address}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </controls:TokenizingTextBox.SuggestedItemTemplate>
+                <controls:TokenizingTextBox.TokenItemTemplate>
+                    <DataTemplate x:DataType="graph:EmailAddress">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{x:Bind Name}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </controls:TokenizingTextBox.TokenItemTemplate>
+
+            </controls:TokenizingTextBox>
             <Button
                 x:Name="SendMailButton"
                 Grid.Column="1"
-                Command="{x:Bind ViewModel.SendMailCommand}">
+                Command="{x:Bind ViewModel.SendMailCommand}"
+                IsEnabled="{x:Bind ViewModel.CanSend, Mode=OneWay}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Send" />
                     <SymbolIcon Symbol="Send" />
@@ -62,7 +90,7 @@
             VerticalAlignment="Stretch"
             AcceptsReturn="True"
             PlaceholderText="Body..."
-            Text="{x:Bind ViewModel.NewBody, Mode=TwoWay}"
+            Text="{x:Bind ViewModel.NewBody, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="Wrap" />
 
     </Grid>

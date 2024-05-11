@@ -182,7 +182,7 @@ If you have any feedback please reach out to joe@JoeFinApps.com
 </value>
   </data>
   <data name="SendMail_Title.Text" xml:space="preserve">
-    <value>SendMail</value>
+    <value>Compose a new email</value>
     <comment>Page title for SendMailPage</comment>
   </data>
 </root>
