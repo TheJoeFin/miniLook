@@ -5,9 +5,9 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
+using miniLook.Models;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Net.Mail;
 using System.Text.RegularExpressions;
 
 namespace miniLook.ViewModels;
@@ -25,6 +25,9 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
 
     [ObservableProperty]
     private string recipientTextBox = string.Empty;
+
+    private string _conversationId = string.Empty;
+    private byte[] _previousConversationalIndex = [];
 
     public ObservableCollection<EmailAddress> EmailAddresses { get; set; } = [];
 
@@ -120,6 +123,11 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
             ToRecipients = recipientList,
         };
 
+        if (!string.IsNullOrWhiteSpace(_conversationId))
+            message.ConversationId = _conversationId;
+
+        // TODO use the conversation index to reply to the email in a thread
+
         await graphClient.Me.SendMail(message, true).Request().PostAsync();
 
         NavigationService.GoBack();
@@ -128,6 +136,17 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     public async void OnNavigatedTo(object parameter)
     {
         await loadSuggestedEmails();
+
+        if (parameter is MailData replying)
+        {
+            if (replying.Subject.StartsWith("Re: "))
+                NewSubject = $"{replying.Subject}";
+            else
+                NewSubject = $"Re: {replying.Subject}";
+
+            EmailAddresses.Add(new EmailAddress { Address = replying.Sender });
+            _conversationId = replying.ConversationId;
+        }
     }
 
     private async Task loadSuggestedEmails()

@@ -94,7 +94,17 @@ public sealed partial class ListDetailsDetailControl : UserControl
     private void ReadUnreadHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
         if (ListDetailsMenuItem is null
-            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+            return;
+
+        MarkMessageIsReadAs(!ListDetailsMenuItem.IsRead);
+
+        TryUpdateParent();
+    }
+
+    private void MarkMessageIsReadAs(bool isRead)
+    {
+        if (ListDetailsMenuItem is null
             || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
             return;
 
@@ -104,8 +114,17 @@ public sealed partial class ListDetailsDetailControl : UserControl
             .Inbox
             .Messages[ListDetailsMenuItem.Id]
             .Request()
-            .UpdateAsync(new Message { IsRead = !ListDetailsMenuItem.IsRead });
+            .UpdateAsync(new Message { IsRead = isRead });
+    }
 
-        TryUpdateParent();
+    private void ReplyHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
+        if (parentListPage is null
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+            return;
+
+        MarkMessageIsReadAs(true);
+        parentListPage.ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
     }
 }

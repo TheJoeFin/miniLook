@@ -418,4 +418,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (!loadedMail && provider?.State == ProviderState.SignedIn)
             await TryToLoadMail();
     }
+
+    public void ReplyToThisMailItem(MailData? listDetailsMenuItem)
+    {
+        NavigationService.NavigateTo(typeof(SendMailViewModel).FullName!, listDetailsMenuItem);
+    }
 }

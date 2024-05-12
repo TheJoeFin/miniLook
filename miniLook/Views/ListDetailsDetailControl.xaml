@@ -22,6 +22,16 @@
 
             <StackPanel Orientation="Horizontal">
                 <HyperlinkButton
+                    x:Name="ReplyHyperlinkButton"
+                    Click="ReplyHyperlinkButton_Click"
+                    ToolTipService.ToolTip="Reply">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <SymbolIcon Symbol="MailReply" />
+                        <TextBlock Text="Reply" />
+                    </StackPanel>
+                </HyperlinkButton>
+
+                <HyperlinkButton
                     x:Name="ReadUnreadHyperlinkButton"
                     Click="ReadUnreadHyperlinkButton_Click"
                     ToolTipService.ToolTip="Toggle read/unread">
