@@ -44,7 +44,6 @@
 
             <HyperlinkButton
                 x:Name="BrowserLink"
-                Margin="{StaticResource SmallLeftMargin}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 Click="BrowserLink_Click"

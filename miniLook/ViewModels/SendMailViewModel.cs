@@ -6,7 +6,9 @@ using Microsoft.Graph;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 
 namespace miniLook.ViewModels;
 
@@ -21,6 +23,9 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     [ObservableProperty]
     private string recipient = string.Empty;
 
+    [ObservableProperty]
+    private string recipientTextBox = string.Empty;
+
     public ObservableCollection<EmailAddress> EmailAddresses { get; set; } = [];
 
     [ObservableProperty]
@@ -33,18 +38,23 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         NavigationService = navigationService;
     }
 
-    public readonly List<EmailAddress> SampleEmails = [
-        new EmailAddress { Address = "me@example.com", Name="me" },
-        new EmailAddress { Address = "you@example.com", Name="you" },
-        new EmailAddress { Address = "joe@JoeFinApps.com", Name="Joe" },
-        new EmailAddress { Address = "josephFinney@outlook.com", Name="Joseph Finney" },
-        ];
-
     public ObservableCollection<EmailAddress> SuggestedRecipients { get; set; } = [];
 
-    public void ClickedItem()
+    public void TryAddThisClickedItem(string clicked)
     {
-        
+        if (!IsValidEmail(clicked))
+            return;
+
+        RecipientTextBox = string.Empty;
+
+        try
+        {
+            EmailAddresses.Add(new EmailAddress { Address = clicked });
+        }
+        catch (Exception)
+        {
+            Debug.WriteLine($"Failed to add {clicked} to emails");
+        }
     }
 
     partial void OnRecipientChanged(string value)
@@ -77,15 +87,8 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         if (trimmedEmail.EndsWith('.'))
             return false; // suggested by @TK-421
 
-        try
-        {
-            MailAddress mailAddress = new(email);
-            return mailAddress.Address == trimmedEmail;
-        }
-        catch
-        {
-            return false;
-        }
+        Regex emailRegex = EmailRegex();
+        return emailRegex.IsMatch(trimmedEmail);
     }
 
     [RelayCommand]
@@ -155,4 +158,7 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     public void OnNavigatedFrom()
     {
     }
+
+    [GeneratedRegex(@"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$")]
+    private static partial Regex EmailRegex();
 }
