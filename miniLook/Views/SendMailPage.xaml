@@ -102,9 +102,17 @@
             VerticalAlignment="Stretch"
             AcceptsReturn="True"
             PlaceholderText="Body..."
+            PreviewKeyDown="BodyTextBox_PreviewKeyDown"
             Style="{StaticResource DefaultTextBoxStyle}"
             Text="{x:Bind ViewModel.NewBody, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="Wrap" />
 
     </Grid>
+
+    <Page.KeyboardAccelerators>
+        <KeyboardAccelerator
+            Key="Enter"
+            Invoked="KeyboardAccelerator_Invoked"
+            Modifiers="Control" />
+    </Page.KeyboardAccelerators>
 </Page>

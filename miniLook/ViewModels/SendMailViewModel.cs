@@ -99,6 +99,9 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     [RelayCommand]
     public async Task SendMail()
     {
+        if (!CanSend)
+            return;
+
         foreach (EmailAddress email in EmailAddresses)
             if (!IsValidEmail(email.Address))
                 return;
