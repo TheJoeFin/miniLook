@@ -26,8 +26,7 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     [ObservableProperty]
     private string recipientTextBox = string.Empty;
 
-    private string _conversationId = string.Empty;
-    private byte[] _previousConversationalIndex = [];
+    private MailData? messageReplyingTo;
 
     public ObservableCollection<EmailAddress> EmailAddresses { get; set; } = [];
 
@@ -123,12 +122,10 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
             ToRecipients = recipientList,
         };
 
-        if (!string.IsNullOrWhiteSpace(_conversationId))
-            message.ConversationId = _conversationId;
-
-        // TODO use the conversation index to reply to the email in a thread
-
-        await graphClient.Me.SendMail(message, true).Request().PostAsync();
+        if (messageReplyingTo is not null)
+            await graphClient.Me.Messages[messageReplyingTo.Id].Reply(message).Request().PostAsync();
+        else
+            await graphClient.Me.SendMail(message, true).Request().PostAsync();
 
         NavigationService.GoBack();
     }
@@ -145,7 +142,7 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
                 NewSubject = $"Re: {replying.Subject}";
 
             EmailAddresses.Add(new EmailAddress { Address = replying.Sender });
-            _conversationId = replying.ConversationId;
+            messageReplyingTo = replying;
         }
     }
 
