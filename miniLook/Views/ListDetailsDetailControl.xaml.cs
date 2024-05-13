@@ -91,17 +91,6 @@ public sealed partial class ListDetailsDetailControl : UserControl
         TryUpdateParent();
     }
 
-    private void ReadUnreadHyperlinkButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ListDetailsMenuItem is null
-            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
-            return;
-
-        MarkMessageIsReadAs(!ListDetailsMenuItem.IsRead);
-
-        TryUpdateParent();
-    }
-
     private void MarkMessageIsReadAs(bool isRead)
     {
         if (ListDetailsMenuItem is null
@@ -126,5 +115,17 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
         MarkMessageIsReadAs(true);
         parentListPage.ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
+    }
+
+    private void MarkReadHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        MarkMessageIsReadAs(true);
+        TryUpdateParent();
+    }
+
+    private void MarkUnreadHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        MarkMessageIsReadAs(false);
+        TryUpdateParent();
     }
 }

@@ -2,9 +2,13 @@
     x:Class="miniLook.Views.ListDetailsDetailControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="boolToVisibility" />
+    </UserControl.Resources>
     <ScrollViewer
         Name="ForegroundElement"
         Padding="10,4"
@@ -32,12 +36,24 @@
                 </HyperlinkButton>
 
                 <HyperlinkButton
-                    x:Name="ReadUnreadHyperlinkButton"
-                    Click="ReadUnreadHyperlinkButton_Click"
-                    ToolTipService.ToolTip="Toggle read/unread">
+                    x:Name="MarkReadHyperlinkButton"
+                    Click="MarkReadHyperlinkButton_Click"
+                    ToolTipService.ToolTip="Mark this mail as read"
+                    Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}, ConverterParameter=true}">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
-                        <TextBlock Text="Read/Unread" />
+                        <FontIcon FontSize="14" Glyph="&#xE8C3;" />
+                        <TextBlock Text="Mark Read" />
+                    </StackPanel>
+                </HyperlinkButton>
+
+                <HyperlinkButton
+                    x:Name="MarkUnreadHyperlinkButton"
+                    Click="MarkUnreadHyperlinkButton_Click"
+                    ToolTipService.ToolTip="Mark this mail as unread"
+                    Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon FontSize="14" Glyph="&#xE715;" />
+                        <TextBlock Text="Mark Unread" />
                     </StackPanel>
                 </HyperlinkButton>
 
