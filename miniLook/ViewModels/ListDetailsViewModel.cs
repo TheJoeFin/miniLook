@@ -65,6 +65,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         GraphService = graphService;
     }
 
+    partial void OnDebugTextChanged(string value)
+    {
+        if (value.Length > 10000)
+            DebugText = value.Substring(0, 5000);
+    }
+
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         UpdateItems();

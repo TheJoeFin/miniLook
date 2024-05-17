@@ -295,6 +295,7 @@
                 <TextBlock
                     x:Name="DebugText"
                     Margin="10,10"
+                    IsTextSelectionEnabled="True"
                     Text="{x:Bind ViewModel.DebugText, Mode=OneWay}"
                     TextWrapping="WrapWholeWords" />
             </ScrollViewer>
