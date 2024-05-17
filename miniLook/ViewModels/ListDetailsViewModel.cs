@@ -50,7 +50,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private bool isSigningOut = false;
 
     [ObservableProperty]
-    private string debugText = $"debug text\n{DateTime.Now.ToShortDateString()}\n{DateTime.Now.ToShortTimeString()}";
+    private string debugText = $"{DateTime.Now.ToShortDateString()} debug text begins";
 
     private INavigationService NavigationService { get; }
 
@@ -81,11 +81,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
 
-        DebugText += $"\n{DateTime.Now.ToShortTimeString()}: Check new timer tick";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Check new timer tick\n");
         checkTimer.Stop();
         if (_graphClient is null)
         {
-            DebugText += $"\nGraph Client is null, returning";
+            DebugText = DebugText.Insert(0, $"Graph Client is null, returning\n");
             checkTimer.Start();
 
             if (HasInternet)
@@ -95,6 +95,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         }
 
         Debug.WriteLine("Checking for new mail");
+        DebugText = DebugText.Insert(0, $"Checking for new mail\n");
         IsLoadingContent = true;
         await GetEvents();
         await SyncMail();
@@ -105,7 +106,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public async void OnNavigatedTo(object parameter)
     {
-        DebugText += $"\nNavigated to ListView Detail Page";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Navigated to ListView Detail Page\n");
         isSigningOut = false;
         MailItems.Clear();
         Events.Clear();
@@ -189,10 +190,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         loadedMail = true;
 
-        DebugText += $"\nTrying to load mail";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Trying to load mail\n");
         if (ProviderManager.Instance.GlobalProvider is not IProvider provider)
         {
-            DebugText += $"\nProvider is not provider, returning";
+            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Provider is not provider, returning\n");
             return;
         }
 
@@ -229,14 +230,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async Task SyncMail()
     {
-        DebugText += $"\nSyncing Mail";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Syncing Mail\n");
         if (_graphClient is null
             || !HasInternet
             || isSigningOut
             || ProviderManager.Instance.GlobalProvider is not IProvider provider
             || isSyncingMail)
         {
-            DebugText += $"\nGraph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return";
+            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Graph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return\n");
             return;
         }
 
@@ -340,17 +341,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         isSyncingMail = false;
         LastSync = DateTime.Now;
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
-        DebugText += $"\nMail synced at {LastSync:t}";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
     }
 
     private async Task GetEvents()
     {
-        DebugText += $"\nGetting Events";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Getting Events\n");
         if (isSigningOut
             || !HasInternet
             || _graphClient is null)
         {
-            DebugText += $"\nGraph client is null, returning";
+            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Graph client is null {_graphClient is null} caused return\n");
             return;
         }
 
@@ -401,7 +402,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
         }
 
-        DebugText += $"\nEvents gotten";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Events gotten\n");
     }
 
     public void OnNavigatedFrom()
@@ -411,7 +412,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
     {
-        DebugText += $"\nProvider state changed to {args.NewState}";
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Provider state changed to {args.NewState}\n");
         if (args.NewState != ProviderState.SignedIn || ProviderManager.Instance.GlobalProvider is not IProvider provider)
             return;
 

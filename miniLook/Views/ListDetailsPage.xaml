@@ -134,7 +134,7 @@
                     <Viewbox Height="16">
                         <SymbolIcon Symbol="Mail" />
                     </Viewbox>
-                    <TextBlock Margin="6,0,0,0" Text="New" />
+                    <TextBlock Margin="6,0,0,0" Text="Compose" />
                 </StackPanel>
             </HyperlinkButton>
 
@@ -253,7 +253,7 @@
             SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
             ViewStateChanged="OnViewStateChanged" />
 
-        <Border
+        <Grid
             x:Name="DebugPane"
             Grid.Row="2"
             MinWidth="200"
@@ -264,13 +264,40 @@
             Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
             CornerRadius="4"
             Visibility="{x:Bind DebugViewToggleItem.IsChecked, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
-            <ScrollViewer VerticalScrollBarVisibility="Visible">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid
+                Padding="8"
+                BorderBrush="{StaticResource AccentFillColorDefaultBrush}"
+                BorderThickness="0,0,0,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontFamily="Cascadia Code"
+                    Style="{StaticResource SubtitleTextBlockStyle}"
+                    Text="debug pane" />
+                <ToggleButton
+                    x:Name="DebugPaneToggleButton"
+                    Grid.Column="1"
+                    IsChecked="{x:Bind DebugViewToggleItem.IsChecked, Mode=TwoWay}"
+                    Style="{StaticResource DefaultToggleButtonStyle}">
+                    <Viewbox Height="14">
+                        <SymbolIcon Symbol="Clear" />
+                    </Viewbox>
+                </ToggleButton>
+            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible">
                 <TextBlock
                     x:Name="DebugText"
                     Margin="10,10"
                     Text="{x:Bind ViewModel.DebugText, Mode=OneWay}"
                     TextWrapping="WrapWholeWords" />
             </ScrollViewer>
-        </Border>
+        </Grid>
     </Grid>
 </Page>

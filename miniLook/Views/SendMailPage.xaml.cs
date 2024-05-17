@@ -51,7 +51,7 @@ public sealed partial class SendMailPage : Page
             return;
 
         ViewModel.TryAddThisClickedItem(senderTextBox.Text);
-        dispatcherTimer.Start();
+       //  dispatcherTimer.Start();
     }
 
     private async void KeyboardAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
