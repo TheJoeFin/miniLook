@@ -70,6 +70,8 @@ public partial class App : Application
             services.AddSingleton<IFileService, FileService>();
 
             // Views and ViewModels
+            services.AddTransient<GraphExplainerViewModel>();
+            services.AddTransient<GraphExplainerPage>();
             services.AddTransient<SendMailViewModel>();
             services.AddTransient<SendMailPage>();
             services.AddTransient<WelcomeViewModel>();

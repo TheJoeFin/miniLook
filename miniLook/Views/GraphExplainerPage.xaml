@@ -1,0 +1,68 @@
+﻿<Page
+    x:Class="miniLook.Views.GraphExplainerPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel
+            Padding="24,120,24,80"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Orientation="Vertical"
+            Spacing="40">
+            <Viewbox
+                Width="100"
+                Height="100"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <SymbolIcon Symbol="Permissions" />
+            </Viewbox>
+
+            <Grid Grid.Row="1">
+                <TextBlock Style="{StaticResource BodyTextStyle}">
+                    When you click the button at the bottom of this page, "View Permissions and Signin" a window will pop up and ask for permission titled:<LineBreak /><Bold>Let this app access your info?</Bold><LineBreak />
+                    <LineBreak />
+                    Let me explain how each permission is used by miniLook and how you can revoke access at any time<LineBreak /><LineBreak />
+                    <Bold>● User (Read):</Bold>
+                    The user object is how details about your account are received from the graph, such as Name and Email. These are used to display within miniLook which account is signed in.<LineBreak />
+                    <Bold>● Mail (Send, ReadWrite):</Bold>
+                    Our app uses the Microsoft Graph API to send and receive emails on your behalf. This allows you to use see a list of emails, see a preview of an email, mark an email as read/unread, archive an email, reply to an email, and compose a new email. All sent mail will be visible in the "Sent Items" folder on Outlook.com<LineBreak />
+                    <Bold>● MailboxSettings (Read):</Bold>
+                    This permission is to read the timezone of your mailbox.<LineBreak />
+                    <Bold>● Calendar (ReadWrite):</Bold>
+                    Today miniLook only uses read access to your calendar events. This is used to show a max of four most recent calendar events with a link to join an online meeting (if it exists) and a link open the event in Outlook on the web.<LineBreak />
+                    <Bold>● People (Read):</Bold>
+                    When composing an email there are suggested recipients provided by the Microsoft Graph API. This is the only place where People (aka Contacts) are used.<LineBreak /><LineBreak />
+                    You always have full control over your data and access. When you logout of the app all cached data and tokens are cleared. You can also revoke access to miniLook from your Microsoft account.<LineBreak /><LineBreak /> <Bold>To revoke access:</Bold><LineBreak />
+                    - Go to "My Microsoft Account"<LineBreak />
+                    - Select "Privacy" in the left sidebar<LineBreak />
+                    - Scroll down and select "App access"<LineBreak />
+                    - From the list of apps find "miniLook"<LineBreak />
+                    - Click the link to revoke access.<LineBreak /><LineBreak />
+                    Finally, miniLook is an open-source project. You can view the source code on GitHub at:<LineBreak /> <Hyperlink NavigateUri="https://github.com/TheJoeFin/miniLook">GitHub.com/TheJoeFin/miniLook</Hyperlink> <LineBreak /><LineBreak /><LineBreak />
+                    Thank you,<LineBreak /><LineBreak />
+                    Joe</TextBlock>
+            </Grid>
+
+            <Button
+                Grid.Row="2"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Command="{x:Bind ViewModel.GetSignedInCommand}"
+                Content="View Permissions and Signin"
+                Style="{StaticResource AccentButtonStyle}" />
+
+            <HyperlinkButton
+                HorizontalAlignment="Center"
+                Command="{x:Bind ViewModel.EmailMeCommand}"
+                NavigateUri="mailto:joe@joefinapps.com">
+                Email joe@JoeFinApps.com
+            </HyperlinkButton>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

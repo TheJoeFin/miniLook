@@ -16,6 +16,6 @@ public partial class WelcomeViewModel : ObservableRecipient
     [RelayCommand]
     public void GetSignedIn()
     {
-        NavigationService.NavigateTo(typeof(ListDetailsViewModel).FullName!);
+        NavigationService.NavigateTo(typeof(GraphExplainerViewModel).FullName!);
     }
 }
