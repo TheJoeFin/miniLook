@@ -12,3 +12,8 @@
     <img src="images/storeBadge.png" width="200" alt="Store link" />
   </a>
 </p>
+
+a tiny little app to view your Outlook email without spending a sizable chunk of RAM.
+
+> NOTE: You will need to install .NET 8 Runtime.
+There is currently a conflict with building a Self-Contained package. When that is resolved this requirement will be dropped.
