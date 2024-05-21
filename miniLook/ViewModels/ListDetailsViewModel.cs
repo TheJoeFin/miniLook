@@ -381,7 +381,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             IUserCalendarViewCollectionPage events = await _graphClient.Me.CalendarView.Request(queryOptions)
                     .Header("Prefer", $"outlook.timezone=\"{user.MailboxSettings.TimeZone}\"")
                     .OrderBy("start/dateTime")
-                    .Top(3)
+                    .Top(4)
                     .GetAsync();
 
             // check to see if any events are different:
