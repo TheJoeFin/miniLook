@@ -25,7 +25,7 @@ public class GraphService : IGraphService
         if (string.IsNullOrEmpty(clientId))
             throw new Exception("Client ID not set");
 
-        string[] scopes = ["User.Read", "People.Read", "Mail.Send", "Mail.ReadWrite", "offline_access", "Calendars.Read", "MailboxSettings.Read"];
+        string[] scopes = ["User.Read", "People.Read", "Mail.Send", "Mail.ReadWrite", "offline_access", "Calendars.ReadWrite", "MailboxSettings.Read"];
 
         MsalProvider provider = new(clientId, scopes, null, false, true);
 
