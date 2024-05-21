@@ -2,7 +2,7 @@
   <img width="128" align="center" src="images/MouseFace.png">
 </p>
 <h1 align="center">
-  Text Grab
+  miniLook (beta)
 </h1>
 <p align="center">
   The smallest email reader ever.
