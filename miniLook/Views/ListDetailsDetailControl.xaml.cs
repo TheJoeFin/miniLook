@@ -117,6 +117,50 @@ public sealed partial class ListDetailsDetailControl : UserControl
         parentListPage.ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
     }
 
+    private async void DeleteHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ListDetailsMenuItem is null
+            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+            return;
+
+        GraphServiceClient _graphClient = provider.GetClient();
+
+        MailFolder? deletedFolder = _graphClient.Me
+            .MailFolders
+            .Request()
+            .Filter("displayName eq 'Deleted Items'")
+            .GetAsync()
+            .Result
+            .FirstOrDefault();
+
+        if (deletedFolder is null)
+            return;
+
+        try
+        {
+            // instead of using DeleteAsync() method, we move the message to the Deleted Items folder
+            // this is what Outlook does when you delete a message
+            // not sure about the translation issues with matching the folder name
+
+            _ = await _graphClient.Me
+                .MailFolders
+                .Inbox
+                .Messages[ListDetailsMenuItem.Id]
+                .Move(deletedFolder.Id)
+                .Request()
+                .PostAsync();
+        }
+        catch (Exception)
+        {
+#if DEBUG
+            throw;
+#endif
+        }
+
+        TryUpdateParent();
+    }
+
     private void MarkReadHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
         MarkMessageIsReadAs(true);

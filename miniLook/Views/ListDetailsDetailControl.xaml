@@ -66,6 +66,16 @@
                         <TextBlock Text="Archive" />
                     </StackPanel>
                 </HyperlinkButton>
+
+                <HyperlinkButton
+                    x:Name="DeleteHyperlinkButton"
+                    Click="DeleteHyperlinkButton_Click"
+                    ToolTipService.ToolTip="Archive this item">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                        <TextBlock Text="Delete" />
+                    </StackPanel>
+                </HyperlinkButton>
             </StackPanel>
 
             <HyperlinkButton
