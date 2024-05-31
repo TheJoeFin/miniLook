@@ -24,59 +24,37 @@
                 Text="{x:Bind ListDetailsMenuItem.Subject, Mode=OneWay}"
                 TextWrapping="WrapWholeWords" />
 
-            <StackPanel Orientation="Horizontal">
-                <HyperlinkButton
-                    x:Name="ReplyHyperlinkButton"
+            <CommandBar HorizontalAlignment="Left" DefaultLabelPosition="Right">
+                <AppBarButton
                     Click="ReplyHyperlinkButton_Click"
-                    ToolTipService.ToolTip="Reply">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <SymbolIcon Symbol="MailReply" />
-                        <TextBlock Text="Reply" />
-                    </StackPanel>
-                </HyperlinkButton>
-
-                <HyperlinkButton
-                    x:Name="MarkReadHyperlinkButton"
+                    Icon="MailReply"
+                    Label="Reply" />
+                <AppBarButton
                     Click="MarkReadHyperlinkButton_Click"
-                    ToolTipService.ToolTip="Mark this mail as read"
+                    Label="Mark Read"
                     Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}, ConverterParameter=true}">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
+                    <AppBarButton.Icon>
                         <FontIcon FontSize="14" Glyph="&#xE8C3;" />
-                        <TextBlock Text="Mark Read" />
-                    </StackPanel>
-                </HyperlinkButton>
-
-                <HyperlinkButton
-                    x:Name="MarkUnreadHyperlinkButton"
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton
                     Click="MarkUnreadHyperlinkButton_Click"
-                    ToolTipService.ToolTip="Mark this mail as unread"
+                    Label="Mark Unread"
                     Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
+                    <AppBarButton.Icon>
                         <FontIcon FontSize="14" Glyph="&#xE715;" />
-                        <TextBlock Text="Mark Unread" />
-                    </StackPanel>
-                </HyperlinkButton>
-
-                <HyperlinkButton
-                    x:Name="ArchiveHyperlinkButton"
-                    Click="ArchiveHyperlinkButton_Click"
-                    ToolTipService.ToolTip="Archive this item">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton Click="ArchiveHyperlinkButton_Click" Label="Archive">
+                    <AppBarButton.Icon>
                         <FontIcon FontSize="14" Glyph="&#xE7B8;" />
-                        <TextBlock Text="Archive" />
-                    </StackPanel>
-                </HyperlinkButton>
-
-                <HyperlinkButton
-                    x:Name="DeleteHyperlinkButton"
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton
                     Click="DeleteHyperlinkButton_Click"
-                    ToolTipService.ToolTip="Archive this item">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                        <TextBlock Text="Delete" />
-                    </StackPanel>
-                </HyperlinkButton>
-            </StackPanel>
+                    Icon="Delete"
+                    Label="Delete" />
+            </CommandBar>
 
             <HyperlinkButton
                 x:Name="BrowserLink"
