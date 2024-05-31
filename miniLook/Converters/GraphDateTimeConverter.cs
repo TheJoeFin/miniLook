@@ -18,8 +18,14 @@ internal class GraphDateTimeConverter : IValueConverter
 
         DateTimeOffset now = DateTimeOffset.Now.LocalDateTime;
 
+
         if (now < dtoEnd && now > dtoStart)
+        {
+            if (graphEvent.IsAllDay is true)
+                return "All day";
+
             return "Now";
+        }
 
         if ((dtoStart - DateTimeOffset.Now).TotalHours < 3)
             return $"{dtoStart.Humanize()} at {dtoStart:hh:mm}";
