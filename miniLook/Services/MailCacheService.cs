@@ -1,5 +1,6 @@
 ﻿using miniLook.Contracts.Services;
 using miniLook.Models;
+using System.Diagnostics;
 using System.Text.Json;
 using Windows.Storage;
 
@@ -40,8 +41,17 @@ internal class MailCacheService : IMailCacheService
             return [];
         }
 
-        using TextReader textReader = new StreamReader(await cacheFile.OpenStreamForReadAsync());
-        string? rawJson = textReader.ReadToEnd();
+        string rawJson = string.Empty;
+        try
+        {
+            using TextReader textReader = new StreamReader(await cacheFile.OpenStreamForReadAsync());
+            rawJson = textReader.ReadToEnd();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            throw;
+        }
 
         if (string.IsNullOrEmpty(rawJson))
             return [];
