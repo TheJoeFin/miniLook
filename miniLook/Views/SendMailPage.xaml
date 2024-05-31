@@ -41,7 +41,12 @@
             <Button
                 x:Name="GoBackButton"
                 Command="{x:Bind ViewModel.GoBackCommand}"
-                Style="{StaticResource NavigationBackButtonNormalStyle}" />
+                Style="{StaticResource NavigationBackButtonNormalStyle}">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Escape" />
+                    <KeyboardAccelerator Key="Left" Modifiers="Menu" />
+                </Button.KeyboardAccelerators>
+            </Button>
             <TextBlock
                 x:Uid="SendMail_Title"
                 Grid.Row="0"
@@ -60,6 +65,9 @@
                     <TextBlock Text="Send" />
                     <SymbolIcon Symbol="Send" />
                 </StackPanel>
+                <HyperlinkButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Enter" Modifiers="Control" />
+                </HyperlinkButton.KeyboardAccelerators>
             </HyperlinkButton>
         </Grid>
 
@@ -108,11 +116,4 @@
             TextWrapping="Wrap" />
 
     </Grid>
-
-    <Page.KeyboardAccelerators>
-        <KeyboardAccelerator
-            Key="Enter"
-            Invoked="KeyboardAccelerator_Invoked"
-            Modifiers="Control" />
-    </Page.KeyboardAccelerators>
 </Page>

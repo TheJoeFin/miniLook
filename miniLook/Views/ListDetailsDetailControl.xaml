@@ -24,36 +24,63 @@
                 Text="{x:Bind ListDetailsMenuItem.Subject, Mode=OneWay}"
                 TextWrapping="WrapWholeWords" />
 
-            <CommandBar HorizontalAlignment="Left" DefaultLabelPosition="Right">
+            <CommandBar
+                HorizontalAlignment="Left"
+                Background="Transparent"
+                DefaultLabelPosition="Right">
                 <AppBarButton
                     Click="ReplyHyperlinkButton_Click"
                     Icon="MailReply"
-                    Label="Reply" />
+                    Label="Reply"
+                    ToolTipService.ToolTip="Reply to this currently selected email">
+                    <AppBarButton.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="R" Modifiers="Control" />
+                    </AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
                 <AppBarButton
                     Click="MarkReadHyperlinkButton_Click"
                     Label="Mark Read"
+                    ToolTipService.ToolTip="Mark this current email as Read"
                     Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}, ConverterParameter=true}">
                     <AppBarButton.Icon>
                         <FontIcon FontSize="14" Glyph="&#xE8C3;" />
                     </AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="Q" Modifiers="Control" />
+                    </AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
                 <AppBarButton
                     Click="MarkUnreadHyperlinkButton_Click"
                     Label="Mark Unread"
+                    ToolTipService.ToolTip="Mark this current email as Unread"
                     Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
                     <AppBarButton.Icon>
                         <FontIcon FontSize="14" Glyph="&#xE715;" />
                     </AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="U" Modifiers="Control" />
+                    </AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
-                <AppBarButton Click="ArchiveHyperlinkButton_Click" Label="Archive">
+                <AppBarButton
+                    Click="ArchiveHyperlinkButton_Click"
+                    Label="Archive"
+                    ToolTipService.ToolTip="Archive this current email">
                     <AppBarButton.Icon>
                         <FontIcon FontSize="14" Glyph="&#xE7B8;" />
                     </AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="Delete" />
+                    </AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
                 <AppBarButton
                     Click="DeleteHyperlinkButton_Click"
                     Icon="Delete"
-                    Label="Delete" />
+                    Label="Delete"
+                    ToolTipService.ToolTip="Move this email to Deleted Items">
+                    <AppBarButton.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="Delete" Modifiers="Shift" />
+                    </AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
             </CommandBar>
 
             <HyperlinkButton

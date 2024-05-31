@@ -123,74 +123,52 @@
                 IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
                 RelativePanel.AlignVerticalCenterWithPanel="True"
                 RelativePanel.RightOf="NoNetworkIcon" />
-
-            <HyperlinkButton
-                x:Name="SendNewMailButton"
-                Command="{x:Bind ViewModel.GoToSendMailCommand}"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                RelativePanel.LeftOf="GoToOutlookDotComButton"
-                ToolTipService.ToolTip="Write a new email">
-                <StackPanel Orientation="Horizontal">
-                    <Viewbox Height="16">
-                        <SymbolIcon Symbol="Mail" />
-                    </Viewbox>
-                    <TextBlock Margin="6,0,0,0" Text="Compose" />
-                </StackPanel>
-            </HyperlinkButton>
-
-            <HyperlinkButton
-                x:Name="GoToOutlookDotComButton"
-                Command="{x:Bind ViewModel.GoToOutlookCommand}"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                RelativePanel.LeftOf="MoreButton"
-                ToolTipService.ToolTip="Go To Outlook.com">
-                <Viewbox Height="16">
-                    <FontIcon Glyph="&#xE8A7;" />
-                </Viewbox>
-            </HyperlinkButton>
-            <Button
-                x:Name="MoreButton"
-                Height="30"
-                RelativePanel.AlignRightWithPanel="True"
-                Style="{StaticResource CommandBarFlyoutEllipsisButtonStyle}">
-                <Button.Content>
-                    <FontIcon
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        FontFamily="Segoe Fluent Icons"
-                        Glyph="&#xE712;" />
-                </Button.Content>
-                <Button.Flyout>
-                    <MenuFlyout>
-                        <MenuFlyoutItem
-                            Command="{x:Bind ViewModel.RefreshCommand}"
-                            Icon="Refresh"
-                            Text="Refresh"
-                            ToolTipService.ToolTip="Refresh" />
-                        <MenuFlyoutItem
-                            Command="{x:Bind ViewModel.SignOutCommand}"
-                            Text="Sign out"
-                            ToolTipService.ToolTip="Sign out">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF3B1;" />
-                            </MenuFlyoutItem.Icon>
-                        </MenuFlyoutItem>
-                        <ToggleMenuFlyoutItem x:Name="DebugViewToggleItem" Text="Debug Log">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEBE8;" />
-                            </MenuFlyoutItem.Icon>
-                        </ToggleMenuFlyoutItem>
-                        <MenuFlyoutItem
-                            Command="{x:Bind ViewModel.NavigateToSettingsCommand}"
-                            Text="Settings"
-                            ToolTipService.ToolTip="Settings">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE713;" />
-                            </MenuFlyoutItem.Icon>
-                        </MenuFlyoutItem>
-                    </MenuFlyout>
-                </Button.Flyout>
-            </Button>
+            <CommandBar
+                Background="Transparent"
+                DefaultLabelPosition="Right"
+                RelativePanel.AlignRightWithPanel="True">
+                <CommandBar.PrimaryCommands>
+                    <AppBarButton
+                        x:Name="ComposeNewMailButton"
+                        Command="{x:Bind ViewModel.GoToSendMailCommand}"
+                        Icon="Mail"
+                        Label="Compose"
+                        ToolTipService.ToolTip="Write a new email">
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="N" Modifiers="Control" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton
+                        Command="{x:Bind ViewModel.GoToOutlookCommand}"
+                        Icon="Go"
+                        ToolTipService.ToolTip="Go To Outlook.com" />
+                </CommandBar.PrimaryCommands>
+                <CommandBar.SecondaryCommands>
+                    <AppBarButton
+                        Command="{x:Bind ViewModel.RefreshCommand}"
+                        Icon="Refresh"
+                        Label="Refresh">
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="R" Modifiers="Control" />
+                            <KeyboardAccelerator Key="F5" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton Command="{x:Bind ViewModel.SignOutCommand}" Label="Sign out">
+                        <AppBarButton.Icon>
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF3B1;" />
+                        </AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarToggleButton x:Name="DebugViewToggleItem" Label="Debug Log">
+                        <AppBarToggleButton.Icon>
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEBE8;" />
+                        </AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
+                    <AppBarButton
+                        Command="{x:Bind ViewModel.NavigateToSettingsCommand}"
+                        Icon="Setting"
+                        Label="Settings" />
+                </CommandBar.SecondaryCommands>
+            </CommandBar>
         </RelativePanel>
         <Grid
             Grid.Row="1"
