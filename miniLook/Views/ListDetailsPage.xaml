@@ -75,58 +75,66 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <RelativePanel Grid.Row="0">
+        <Grid Grid.Row="0">
 
-            <ToggleButton
-                x:Name="CalendarToggleButton"
-                Width="48"
-                RelativePanel.AlignLeftWithPanel="True"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                Style="{StaticResource DefaultToggleButtonStyle}"
-                ToolTipService.ToolTip="Show a couple of events in the next couple days">
-                <SymbolIcon Symbol="Calendar" />
-            </ToggleButton>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-            <TextBlock
-                x:Name="UnreadMailNumber"
-                Padding="10,0,6,0"
-                VerticalAlignment="Center"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                RelativePanel.RightOf="CalendarToggleButton"
-                Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
-            <TextBlock
-                x:Name="UnreadMailText"
-                VerticalAlignment="Center"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                RelativePanel.RightOf="UnreadMailNumber"
-                Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="unread"
-                ToolTipService.ToolTip="{x:Bind ViewModel.LastSync, Mode=OneWay, Converter={StaticResource stringFormatConverter}, ConverterParameter='{}Last Sync at {0:t}'}" />
+            <StackPanel Orientation="Horizontal">
+                <ToggleButton
+                    x:Name="CalendarToggleButton"
+                    Width="48"
+                    RelativePanel.AlignLeftWithPanel="True"
+                    RelativePanel.AlignVerticalCenterWithPanel="True"
+                    Style="{StaticResource DefaultToggleButtonStyle}"
+                    ToolTipService.ToolTip="Show a couple of events in the next couple days">
+                    <SymbolIcon Symbol="Calendar" />
+                </ToggleButton>
 
-            <FontIcon
-                x:Name="NoNetworkIcon"
-                Margin="6"
-                FontSize="16"
-                Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
-                Glyph="&#xF384;"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                RelativePanel.RightOf="UnreadMailText"
-                ToolTipService.ToolTip="No network"
-                Visibility="{x:Bind ViewModel.HasInternet, Mode=OneWay, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
+                <TextBlock
+                    x:Name="UnreadMailNumber"
+                    Padding="10,0,6,0"
+                    VerticalAlignment="Center"
+                    RelativePanel.AlignVerticalCenterWithPanel="True"
+                    RelativePanel.RightOf="CalendarToggleButton"
+                    Style="{ThemeResource SubtitleTextBlockStyle}"
+                    Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
+                <TextBlock
+                    x:Name="UnreadMailText"
+                    VerticalAlignment="Center"
+                    RelativePanel.AlignVerticalCenterWithPanel="True"
+                    RelativePanel.RightOf="UnreadMailNumber"
+                    Style="{ThemeResource SubtitleTextBlockStyle}"
+                    Text="unread"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.LastSync, Mode=OneWay, Converter={StaticResource stringFormatConverter}, ConverterParameter='{}Last Sync at {0:t}'}" />
 
-            <ProgressRing
-                Width="16"
-                Height="16"
-                Margin="6"
-                VerticalAlignment="Bottom"
-                IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                RelativePanel.RightOf="NoNetworkIcon" />
+                <FontIcon
+                    x:Name="NoNetworkIcon"
+                    Margin="6"
+                    FontSize="16"
+                    Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                    Glyph="&#xF384;"
+                    RelativePanel.AlignVerticalCenterWithPanel="True"
+                    RelativePanel.RightOf="UnreadMailText"
+                    ToolTipService.ToolTip="No network"
+                    Visibility="{x:Bind ViewModel.HasInternet, Mode=OneWay, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
+
+                <ProgressRing
+                    Width="16"
+                    Height="16"
+                    Margin="6"
+                    VerticalAlignment="Center"
+                    IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
+                    RelativePanel.AlignVerticalCenterWithPanel="True"
+                    RelativePanel.RightOf="NoNetworkIcon" />
+            </StackPanel>
+
             <CommandBar
+                Grid.Column="1"
                 Background="Transparent"
-                DefaultLabelPosition="Right"
-                RelativePanel.AlignRightWithPanel="True">
+                DefaultLabelPosition="Right">
                 <CommandBar.PrimaryCommands>
                     <AppBarButton
                         x:Name="ComposeNewMailButton"
@@ -169,7 +177,7 @@
                         Label="Settings" />
                 </CommandBar.SecondaryCommands>
             </CommandBar>
-        </RelativePanel>
+        </Grid>
         <Grid
             Grid.Row="1"
             Padding="12"
