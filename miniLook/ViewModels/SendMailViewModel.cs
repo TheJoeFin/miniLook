@@ -133,6 +133,41 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         NavigationService.GoBack();
     }
 
+    [RelayCommand]
+    public async Task ForwardMail()
+    {
+        if (!CanSend)
+            return;
+
+        foreach (EmailAddress email in EmailAddresses)
+            if (!IsValidEmail(email.Address))
+                return;
+
+        List<Recipient> recipientList = new();
+
+        foreach (EmailAddress email in EmailAddresses)
+            recipientList.Add(new Recipient { EmailAddress = email });
+
+        if (ProviderManager.Instance.GlobalProvider?.GetClient() is not GraphServiceClient graphClient)
+            return;
+
+        Message message = new()
+        {
+            Subject = $"Fwd: {NewSubject}",
+            Body = new ItemBody
+            {
+                ContentType = BodyType.Text,
+                Content = NewBody,
+            },
+            ToRecipients = recipientList,
+        };
+
+        await graphClient.Me.SendMail(message, true).Request().PostAsync();
+
+        NavigationService.GoBack();
+    }
+
+
     public async void OnNavigatedTo(object parameter)
     {
         await loadSuggestedEmails();
@@ -146,6 +181,12 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
 
             EmailAddresses.Add(new EmailAddress { Address = replying.Sender });
             messageReplyingTo = replying;
+        }
+
+        if (parameter is MailData forwarding)
+        {
+            NewSubject = $"Fwd: {forwarding.Subject}";
+            NewBody = $"Forwarded message:\n\n{forwarding.Body}";
         }
     }
 

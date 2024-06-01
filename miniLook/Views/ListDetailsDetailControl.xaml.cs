@@ -22,7 +22,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     public ListDetailsDetailControl()
     {
-        InitializeComponent();
+        this.InitializeComponent();
     }
 
     private static void OnListDetailsMenuItemPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -115,6 +115,17 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
         MarkMessageIsReadAs(true);
         parentListPage.ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
+    }
+
+    private void ForwardHyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
+        if (parentListPage is null
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+            return;
+
+        MarkMessageIsReadAs(true);
+        parentListPage.ViewModel.ForwardThisMailItem(ListDetailsMenuItem);
     }
 
     private async void DeleteHyperlinkButton_Click(object sender, RoutedEventArgs e)

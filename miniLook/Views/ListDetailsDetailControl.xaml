@@ -1,4 +1,5 @@
-﻿<UserControl
+﻿<?xml version="1.0" encoding="utf-8" ?>
+    <UserControl
     x:Class="miniLook.Views.ListDetailsDetailControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -10,7 +11,7 @@
         <converters:BoolToVisibilityConverter x:Key="boolToVisibility" />
     </UserControl.Resources>
     <ScrollViewer
-        Name="ForegroundElement"
+        x:Name="ForegroundElement"
         Padding="10,4"
         HorizontalAlignment="Stretch"
         IsTabStop="True"
@@ -81,6 +82,16 @@
                         <KeyboardAccelerator Key="Delete" Modifiers="Shift" />
                     </AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
+                <AppBarButton
+                    Click="ForwardHyperlinkButton_Click"
+                    Icon="MailForward"
+                    Label="Forward"
+                    ToolTipService.ToolTip="Forward this currently selected email">             
+                    <AppBarButton.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="F" Modifiers="Control" />
+                    </AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
+
             </CommandBar>
 
             <HyperlinkButton
