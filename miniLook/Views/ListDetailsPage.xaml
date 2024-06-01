@@ -78,11 +78,11 @@
         <Grid Grid.Row="0">
 
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" MinWidth="170" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
                 <ToggleButton
                     x:Name="CalendarToggleButton"
                     Width="48"
@@ -149,6 +149,7 @@
                     <AppBarButton
                         Command="{x:Bind ViewModel.GoToOutlookCommand}"
                         Icon="Go"
+                        Label="Outlook.com"
                         ToolTipService.ToolTip="Go To Outlook.com" />
                 </CommandBar.PrimaryCommands>
                 <CommandBar.SecondaryCommands>
