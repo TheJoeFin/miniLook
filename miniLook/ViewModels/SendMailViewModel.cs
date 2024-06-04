@@ -30,6 +30,7 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
 
     public ObservableCollection<EmailAddress> EmailAddresses { get; set; } = [];
 
+
     [ObservableProperty]
     private bool canSend = false;
 
@@ -172,23 +173,28 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     {
         await loadSuggestedEmails();
 
-        if (parameter is MailData replying)
+        if (parameter is (MailData mailData, MessageActionFlag action))
         {
-            if (replying.Subject.StartsWith("Re: "))
-                NewSubject = $"{replying.Subject}";
-            else
-                NewSubject = $"Re: {replying.Subject}";
+            switch (action)
+            {
+                case MessageActionFlag.Reply:
+                    if (mailData.Subject.StartsWith("Re: "))
+                        NewSubject = $"{mailData.Subject}";
+                    else
+                        NewSubject = $"Re: {mailData.Subject}";
 
-            EmailAddresses.Add(new EmailAddress { Address = replying.Sender });
-            messageReplyingTo = replying;
-        }
+                    EmailAddresses.Add(new EmailAddress { Address = mailData.Sender });
+                    messageReplyingTo = mailData;
+                    break;
 
-        if (parameter is MailData forwarding)
-        {
-            NewSubject = $"Fwd: {forwarding.Subject}";
-            NewBody = $"Forwarded message:\n\n{forwarding.Body}";
+                case MessageActionFlag.Forward:
+                    NewSubject = $"Fwd: {mailData.Subject}";
+                    NewBody = $"Forwarded message:\n\n{mailData.Body}";
+                    break;
+            }
         }
     }
+
 
     private async Task loadSuggestedEmails()
     {
