@@ -25,8 +25,6 @@ public partial class MailData: ObservableRecipient
 
     public DateTimeOffset ReceivedDateTime { get; set; } = DateTimeOffset.MinValue;
 
-    public MessageActionFlag ActionFlag { get; set; }
-
     [JsonIgnore]
     public Message? GraphMessage { get; set; }
 
