@@ -71,8 +71,5 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </PRIResource>
   </ItemGroup>
-  
-  <ItemGroup>
-    <PRIResource Remove="OAuth.resw" />
-  </ItemGroup>
+
 </Project>
