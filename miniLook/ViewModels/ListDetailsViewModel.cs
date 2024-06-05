@@ -428,6 +428,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public void ReplyToThisMailItem(MailData? listDetailsMenuItem)
     {
-        NavigationService.NavigateTo(typeof(SendMailViewModel).FullName!, listDetailsMenuItem);
+        NavigationService.NavigateTo(typeof(SendMailViewModel).FullName!, (listDetailsMenuItem, MessageActionFlag.Reply));
     }
+
+    public void ForwardThisMailItem(MailData? listDetailsMenuItem)
+    {
+        NavigationService.NavigateTo(typeof(SendMailViewModel).FullName!, (listDetailsMenuItem, MessageActionFlag.Forward));
+    }
+
+
 }
