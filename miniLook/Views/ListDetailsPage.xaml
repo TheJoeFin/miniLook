@@ -158,7 +158,6 @@
                         Icon="Refresh"
                         Label="Refresh">
                         <AppBarButton.KeyboardAccelerators>
-                            <KeyboardAccelerator Key="R" Modifiers="Control" />
                             <KeyboardAccelerator Key="F5" />
                         </AppBarButton.KeyboardAccelerators>
                     </AppBarButton>
