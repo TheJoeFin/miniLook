@@ -11,6 +11,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using CommunityToolkit.WinUI.Helpers;
+using Windows.UI.Notifications;
+using Windows.Data.Xml.Dom;
 
 
 namespace miniLook.ViewModels;
@@ -108,6 +110,31 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         IsLoadingContent = false;
         checkTimer.Start();
+    }
+
+    private void setBadgeNumber(int num)
+    {
+        // Get the blank badge XML payload for a badge number
+        XmlDocument badgeXml =
+            BadgeUpdateManager.GetTemplateContent(BadgeTemplateType.BadgeNumber);
+
+        // Set the value of the badge in the XML to our number
+
+        if (badgeXml.SelectSingleNode("/badge") is not XmlElement badgeElement)
+            return;
+
+        badgeElement.SetAttribute("value", num.ToString());
+
+        // Create the badge notification
+        BadgeNotification badge = new BadgeNotification(badgeXml);
+
+        // Create the badge updater for the application
+        BadgeUpdater badgeUpdater =
+            BadgeUpdateManager.CreateBadgeUpdaterForApplication();
+
+        // And update the badge
+        badgeUpdater.Update(badge);
+
     }
 
     public async void OnNavigatedTo(object parameter)
@@ -347,6 +374,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         isSyncingMail = false;
         LastSync = DateTime.Now;
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
+        setBadgeNumber(NumberUnread);
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
     }
 
