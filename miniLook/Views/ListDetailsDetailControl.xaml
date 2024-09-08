@@ -99,7 +99,7 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 Click="BrowserLink_Click"
-                Content="See this email in Outlook in a browser" />
+                Content="View email in a browser" />
 
             <StackPanel Padding="0,15,0,0">
                 <TextBlock

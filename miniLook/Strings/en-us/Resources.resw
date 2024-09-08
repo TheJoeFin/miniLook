@@ -189,4 +189,7 @@ If you have any feedback please reach out to joe@JoeFinApps.com
     <value>GraphExplainer</value>
     <comment>Page title for GraphExplainerPage</comment>
   </data>
+  <data name="Settings_ClearMailCache.Content" xml:space="preserve">
+    <value>Clear Mail Cache</value>
+  </data>
 </root>

@@ -27,7 +27,9 @@ public partial class SettingsViewModel : ObservableRecipient
 
     public INavigationService NavigationService { get; }
 
-    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService)
+    public IMailCacheService MailCacheService { get; }
+
+    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService, IMailCacheService mailCacheService)
     {
         _themeSelectorService = themeSelectorService;
         _elementTheme = _themeSelectorService.Theme;
@@ -44,6 +46,7 @@ public partial class SettingsViewModel : ObservableRecipient
             });
 
         NavigationService = navigationService;
+        MailCacheService = mailCacheService;
     }
 
     [RelayCommand]
@@ -51,6 +54,13 @@ public partial class SettingsViewModel : ObservableRecipient
     {
         if (NavigationService.CanGoBack)
             NavigationService.GoBack();
+    }
+
+    [RelayCommand]
+    private async Task ClearCachedData()
+    {
+        await MailCacheService.ClearMailCacheAsync();
+        await MailCacheService.SaveDeltaLink(null);
     }
 
     private static string GetVersionDescription()

@@ -80,9 +80,15 @@ internal class MailCacheService : IMailCacheService
         string json = JsonSerializer.Serialize(allMailData);
 
         StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
-        StorageFile cacheFile = await localCacheFolder.CreateFileAsync(MailCacheFileName, CreationCollisionOption.ReplaceExisting);
+        try
+        {
+            StorageFile cacheFile = await localCacheFolder.CreateFileAsync(MailCacheFileName, CreationCollisionOption.ReplaceExisting);
 
-        using TextWriter textWriter = new StreamWriter(await cacheFile.OpenStreamForWriteAsync());
-        textWriter.Write(json);
+            using TextWriter textWriter = new StreamWriter(await cacheFile.OpenStreamForWriteAsync());
+            textWriter.Write(json);
+        }
+        catch (IOException)
+        {
+        }
     }
 }

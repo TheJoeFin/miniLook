@@ -14,6 +14,7 @@ using CommunityToolkit.WinUI.Helpers;
 using Windows.UI.Notifications;
 using Windows.Data.Xml.Dom;
 using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml.Controls;
 
 
 namespace miniLook.ViewModels;
@@ -207,6 +208,19 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.CompactOverlay);
         else
             App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.Default);
+    }
+
+    [RelayCommand]
+    private void ViewHtmlEmailInWindow()
+    {
+        // WebView2 webView2 = new();
+        // webView2.Source = new Uri("https://www.example.com");
+
+        AppWindow viewWindow = AppWindow.Create();
+        viewWindow.Title = "HTML Email Viewer";
+        viewWindow.Show();
+
+
     }
 
     private async Task TryToLoadMail()

@@ -21,6 +21,8 @@ public partial class MailData: ObservableRecipient
 
     public string Body { get; set; } = string.Empty;
 
+    public string HtmlBody { get; set; } = string.Empty;
+
     public string WebLink { get; set; } = string.Empty;
 
     public DateTimeOffset ReceivedDateTime { get; set; } = DateTimeOffset.MinValue;
@@ -47,10 +49,11 @@ public partial class MailData: ObservableRecipient
         ConversationId = message.ConversationId;
         ConversationIndex = message.ConversationIndex;
 
-        // look into maybe using TinyHtml.WPF
         Body = message.BodyPreview;
         if (message.Body?.ContentType == BodyType.Text)
             Body = message.Body.Content;
+        else if (message.Body?.ContentType == BodyType.Html)
+            HtmlBody = message.Body.Content;
     }
 
     public override bool Equals(object? obj)

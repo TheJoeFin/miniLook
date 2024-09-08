@@ -2,6 +2,7 @@
     x:Class="miniLook.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="using:miniLook.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,6 +10,7 @@
     mc:Ignorable="d">
     <Page.Resources>
         <helpers:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
+        <converters:BoolNegationConverter x:Key="BoolNegation" />
     </Page.Resources>
     <Grid Padding="12,2">
         <Grid.RowDefinitions>
@@ -66,6 +68,13 @@
                     </RadioButton>
                 </StackPanel>
             </StackPanel>
+
+            <HyperlinkButton
+                x:Uid="Settings_ClearMailCache"
+                Command="{x:Bind ViewModel.ClearCachedDataCommand}"
+                Foreground="Red"
+                IsEnabled="{x:Bind ViewModel.ClearCachedDataCommand.IsRunning, Converter={StaticResource BoolNegation}}"
+                ToolTipService.ToolTip="This could take some time if you have a lot of mail to re-sync the mail" />
 
             <TextBlock x:Uid="Settings_About" Style="{ThemeResource SubtitleTextBlockStyle}" />
 

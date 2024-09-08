@@ -25,6 +25,7 @@
       <AppxBundlePlatforms>x86|x64|arm64</AppxBundlePlatforms>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Views\HtmlViewWindow.xaml" />
     <None Remove="Views\ShellPage.xaml" />
   </ItemGroup>
 
@@ -36,6 +37,7 @@
     <PackageReference Include="CommunityToolkit.Authentication.Msal" Version="7.1.4" />
     <PackageReference Include="CommunityToolkit.Graph" Version="7.1.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.1.240821" />
     <PackageReference Include="CommunityToolkit.WinUI.Helpers" Version="8.0.240109" />
     <PackageReference Include="CommunityToolkit.WinUI.UI.Controls" Version="7.1.2" />
     <PackageReference Include="Dapplo.Windows.User32" Version="1.0.28" />
@@ -61,6 +63,9 @@
     <None Update="OAuth.resw">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Page Update="Views\HtmlViewWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <ItemGroup>

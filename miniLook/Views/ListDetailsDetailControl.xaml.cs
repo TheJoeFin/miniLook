@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using miniLook.Helpers;
 using miniLook.Models;
-using Windows.System;
 
 namespace miniLook.Views;
 
@@ -33,13 +32,18 @@ public sealed partial class ListDetailsDetailControl : UserControl
         }
     }
 
-    private void BrowserLink_Click(object sender, RoutedEventArgs e)
+    private async void BrowserLink_Click(object sender, RoutedEventArgs e)
     {
-        if (ListDetailsMenuItem is null || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+         if (ListDetailsMenuItem is null )
             return;
 
-        // Launch the URI
-        _ = Launcher.LaunchUriAsync(new Uri(ListDetailsMenuItem.WebLink));
+        HtmlViewWindow viewWindow = new()
+        {
+            Title = ListDetailsMenuItem.Subject
+        };
+
+        await viewWindow.SetContent(ListDetailsMenuItem.HtmlBody ?? "No HTML body connent");
+        viewWindow.Show();
     }
 
     private void TryUpdateParent()
@@ -53,7 +57,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private async void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ListDetailsMenuItem is null 
+        if (ListDetailsMenuItem is null
             || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
             || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
