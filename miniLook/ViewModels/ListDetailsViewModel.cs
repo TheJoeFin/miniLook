@@ -116,31 +116,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         checkTimer.Start();
     }
 
-    private void setBadgeNumber(int num)
-    {
-        // Get the blank badge XML payload for a badge number
-        XmlDocument badgeXml =
-            BadgeUpdateManager.GetTemplateContent(BadgeTemplateType.BadgeNumber);
-
-        // Set the value of the badge in the XML to our number
-
-        if (badgeXml.SelectSingleNode("/badge") is not XmlElement badgeElement)
-            return;
-
-        badgeElement.SetAttribute("value", num.ToString());
-
-        // Create the badge notification
-        BadgeNotification badge = new BadgeNotification(badgeXml);
-
-        // Create the badge updater for the application
-        BadgeUpdater badgeUpdater =
-            BadgeUpdateManager.CreateBadgeUpdaterForApplication();
-
-        // And update the badge
-        badgeUpdater.Update(badge);
-
-    }
-
     public async void OnNavigatedTo(object parameter)
     {
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Navigated to ListView Detail Page\n");
@@ -392,7 +367,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         isSyncingMail = false;
         LastSync = DateTime.Now;
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
-        setBadgeNumber(NumberUnread);
+        App.SetTaskbarBadgeToNumber(NumberUnread);
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
     }
 
@@ -430,20 +405,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     .Top(4)
                     .GetAsync();
 
-            // check to see if any events are different:
-            bool eventsChanged = false;
-            for (int i = 0; i < events.Count; i++)
-            {
-                if (Events.Count <= i || events[i].Id != Events[i].Id)
-                {
-                    eventsChanged = true;
-                    break;
-                }
-            }
-
-            if (!eventsChanged)
-                return;
-
             Events.Clear();
 
             foreach (Event ev in events)
@@ -459,6 +420,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public void OnNavigatedFrom()
     {
+        App.SetTaskbarBadgeToNumber(NumberUnread);
         loadedMail = false;
     }
 

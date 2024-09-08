@@ -25,6 +25,8 @@ public partial class MailData: ObservableRecipient
 
     public DateTimeOffset ReceivedDateTime { get; set; } = DateTimeOffset.MinValue;
 
+    public double ForegroundOpacity => IsRead ? 0.7 : 1;
+
     [JsonIgnore]
     public Message? GraphMessage { get; set; }
 

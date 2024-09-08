@@ -34,7 +34,8 @@
                 <StackPanel
                     Grid.Column="1"
                     Margin="{StaticResource SmallLeftMargin}"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    Opacity="{x:Bind ForegroundOpacity, Mode=OneWay}">
                     <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Subject}" />
                     <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
                 </StackPanel>

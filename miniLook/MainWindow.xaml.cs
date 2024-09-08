@@ -43,4 +43,9 @@ public sealed partial class MainWindow : WindowEx
         // double scaleFactor = dpi / 96.0;
         // this.Move((int)(displays[0].WorkingArea.Right - this.Width * scaleFactor), (int)(displays[0].WorkingArea.Bottom - this.Height * scaleFactor));
     }
+
+    private void WindowEx_Closed(object sender, Microsoft.UI.Xaml.WindowEventArgs args)
+    {
+        App.SetTaskbarBadgeToNumber(0);
+    }
 }
