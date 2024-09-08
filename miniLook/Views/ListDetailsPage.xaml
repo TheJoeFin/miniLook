@@ -136,6 +136,13 @@
                 Background="Transparent"
                 DefaultLabelPosition="Right">
                 <CommandBar.PrimaryCommands>
+                    <AppBarToggleButton
+                        x:Name="CompactOverlayToggleButton"
+                        Command="{x:Bind ViewModel.ToggleOverlayModeCommand}"
+                        Icon="BackToWindow"
+                        IsChecked="{x:Bind ViewModel.IsOverlayMode, Mode=OneWay}"
+                        LabelPosition="Collapsed"
+                        ToolTipService.ToolTip="Enter Compact Overlay Mode" />
                     <AppBarButton
                         x:Name="ComposeNewMailButton"
                         Command="{x:Bind ViewModel.GoToSendMailCommand}"

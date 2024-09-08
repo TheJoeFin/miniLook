@@ -13,6 +13,7 @@ using System.Diagnostics;
 using CommunityToolkit.WinUI.Helpers;
 using Windows.UI.Notifications;
 using Windows.Data.Xml.Dom;
+using Microsoft.UI.Windowing;
 
 
 namespace miniLook.ViewModels;
@@ -38,6 +39,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     [ObservableProperty]
     private bool hasInternet = true;
+
+    [ObservableProperty]
+    private bool isOverlayMode = false;
 
     public ObservableCollection<MailData> MailItems { get; private set; } = [];
 
@@ -155,6 +159,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         checkTimer.Interval = TimeSpan.FromSeconds(10);
         checkTimer.Tick += CheckTimer_Tick;
 
+        if (App.MainWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
+            IsOverlayMode = true;
+
         await TryToLoadMail();
     }
 
@@ -214,6 +221,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private void NavigateToSettings()
     {
         NavigationService.NavigateTo(typeof(SettingsViewModel).FullName!);
+    }
+
+    [RelayCommand]
+    private void ToggleOverlayMode()
+    {
+        IsOverlayMode = !IsOverlayMode;
+
+        if (IsOverlayMode)
+            App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.CompactOverlay);
+        else
+            App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.Default);
     }
 
     private async Task TryToLoadMail()
