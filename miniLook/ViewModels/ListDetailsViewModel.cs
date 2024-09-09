@@ -210,19 +210,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.Default);
     }
 
-    [RelayCommand]
-    private void ViewHtmlEmailInWindow()
-    {
-        // WebView2 webView2 = new();
-        // webView2.Source = new Uri("https://www.example.com");
-
-        AppWindow viewWindow = AppWindow.Create();
-        viewWindow.Title = "HTML Email Viewer";
-        viewWindow.Show();
-
-
-    }
-
     private async Task TryToLoadMail()
     {
         if (loadedMail)
