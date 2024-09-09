@@ -8,6 +8,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:windowex="using:WinUIEx"
     mc:Ignorable="d">
-    
-    <WebView2 x:Name="WebView" />
+
+    <WebView2 x:Name="WebView" CoreWebView2Initialized="WebView_CoreWebView2Initialized" />
 </windowex:WindowEx>
