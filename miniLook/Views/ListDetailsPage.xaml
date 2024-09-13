@@ -14,6 +14,7 @@
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="boolToVisConverter" />
         <converters:StringFormatConverter x:Key="stringFormatConverter" />
+        <miniConverters:IsReadToOpacityConverter x:Key="isReadToOpacityConverter" />
         <miniConverters:GraphDateTimeConverter x:Key="graphDateConverter" />
         <miniConverters:StringNavigateUriConverter x:Key="stringUriConverter" />
 
@@ -35,7 +36,7 @@
                     Grid.Column="1"
                     Margin="{StaticResource SmallLeftMargin}"
                     VerticalAlignment="Center"
-                    Opacity="{x:Bind ForegroundOpacity, Mode=OneWay}">
+                    Opacity="{x:Bind IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
                     <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Subject}" />
                     <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
                 </StackPanel>

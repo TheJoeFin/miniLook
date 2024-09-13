@@ -13,7 +13,7 @@ public partial class MailData: ObservableRecipient
 
     public string ConversationId { get; set; } = string.Empty;
     
-    public byte[] ConversationIndex { get; private set; }
+    public byte[]? ConversationIndex { get; private set; }
 
     public string Sender { get; set; } = $"empty@example.com";
 
@@ -26,8 +26,6 @@ public partial class MailData: ObservableRecipient
     public string WebLink { get; set; } = string.Empty;
 
     public DateTimeOffset ReceivedDateTime { get; set; } = DateTimeOffset.MinValue;
-
-    public double ForegroundOpacity => IsRead ? 0.7 : 1;
 
     [JsonIgnore]
     public Message? GraphMessage { get; set; }
@@ -50,9 +48,8 @@ public partial class MailData: ObservableRecipient
         ConversationIndex = message.ConversationIndex;
 
         Body = message.BodyPreview;
-        if (message.Body?.ContentType == BodyType.Text)
-            Body = message.Body.Content;
-        else if (message.Body?.ContentType == BodyType.Html)
+
+        if (message.Body is not null && message.Body.ContentType == BodyType.Html)
             HtmlBody = message.Body.Content;
     }
 
