@@ -10,37 +10,86 @@
     xmlns:miniConverters="using:miniLook.Converters"
     xmlns:models="using:miniLook.Models"
     xmlns:views="using:miniLook.Views"
+    x:Name="MailListPage"
     mc:Ignorable="d">
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="boolToVisConverter" />
         <converters:StringFormatConverter x:Key="stringFormatConverter" />
+        <converters:BoolNegationConverter x:Key="boolNegationConverter" />
         <miniConverters:IsReadToOpacityConverter x:Key="isReadToOpacityConverter" />
         <miniConverters:GraphDateTimeConverter x:Key="graphDateConverter" />
         <miniConverters:StringNavigateUriConverter x:Key="stringUriConverter" />
 
+
         <DataTemplate x:Key="ItemTemplate" x:DataType="models:MailData">
-            <Grid Height="60">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Border
-                    Width="10"
-                    Height="10"
-                    Margin="-6,0,-4,0"
-                    Background="{ThemeResource AccentFillColorDefaultBrush}"
-                    CornerRadius="5"
-                    ToolTipService.ToolTip="This mail is Unread"
-                    Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
-                <StackPanel
-                    Grid.Column="1"
-                    Margin="{StaticResource SmallLeftMargin}"
-                    VerticalAlignment="Center"
-                    Opacity="{x:Bind IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
-                    <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Subject}" />
-                    <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
-                </StackPanel>
-            </Grid>
+
+            <Border Margin="-6,0,-4,0">
+                <Border.Resources>
+                    <FontIconSource x:Key="ArchiveIcon" Glyph="&#xE7B8;" />
+                    <FontIconSource x:Key="ReadIcon" Glyph="&#xE8C3;" />
+                    <SwipeItems x:Key="right" Mode="Execute">
+                        <SwipeItem
+                            BehaviorOnInvoked="Close"
+                            IconSource="{StaticResource ArchiveIcon}"
+                            Invoked="ArchiveSwipeItem_Invoked"
+                            Text="Archive" />
+                    </SwipeItems>
+                    <SwipeItems x:Key="left" Mode="Execute">
+                        <SwipeItem
+                            BehaviorOnInvoked="RemainOpen"
+                            IconSource="{StaticResource ReadIcon}"
+                            Invoked="ReadSwipeItem_Invoked"
+                            Text="Archive" />
+                    </SwipeItems>
+                </Border.Resources>
+
+                <SwipeControl LeftItems="{StaticResource left}" RightItems="{StaticResource right}">
+                    <Grid Height="60">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border
+                            Width="10"
+                            Height="10"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                            CornerRadius="5"
+                            ToolTipService.ToolTip="This mail is Unread"
+                            Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="{StaticResource SmallLeftMargin}"
+                            VerticalAlignment="Center"
+                            Opacity="{x:Bind IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
+                            <TextBlock Style="{StaticResource ListTitleStyle}" Text="{x:Bind Subject}" />
+                            <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
+                        </StackPanel>
+                        <Grid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem
+                                    x:Name="ArchiveContextMenuItem"
+                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveItemCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    Text="Archive">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem
+                                    x:Name="MarkReadContextMenuItem"
+                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.MarkMessageIsReadCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    IsEnabled="{x:Bind isRead, Converter={StaticResource boolNegationConverter}}"
+                                    Text="Mark As Read">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon FontSize="14" Glyph="&#xE8C3;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Grid.ContextFlyout>
+                    </Grid>
+                </SwipeControl>
+            </Border>
         </DataTemplate>
 
         <DataTemplate x:Key="DetailsTemplate">

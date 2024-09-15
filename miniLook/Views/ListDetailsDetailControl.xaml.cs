@@ -57,48 +57,24 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private async void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
+        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
+
         if (ListDetailsMenuItem is null
             || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
-            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable
+            || parentListPage is null)
             return;
 
-        GraphServiceClient _graphClient = provider.GetClient();
-
-        MailFolder? archiveFolder = _graphClient.Me
-            .MailFolders
-            .Request()
-            .Filter("displayName eq 'Archive'")
-            .GetAsync()
-            .Result
-            .FirstOrDefault();
-
-        if (archiveFolder is null)
-            return;
-
-        try
-        {
-            _ = await _graphClient.Me
-                .MailFolders
-                .Inbox
-                .Messages[ListDetailsMenuItem.Id]
-                .Move(archiveFolder.Id)
-                .Request()
-                .PostAsync();
-        }
-        catch (Exception)
-        {
-#if DEBUG
-            throw;
-#endif
-        }
-
-        TryUpdateParent();
+        await parentListPage.ViewModel.ArchiveThisMailItem(ListDetailsMenuItem);
     }
 
     private void MarkMessageIsReadAs(bool isRead)
     {
+        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
+
         if (ListDetailsMenuItem is null
-            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
+            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
+            || parentListPage is null)
             return;
 
         GraphServiceClient _graphClient = provider.GetClient();

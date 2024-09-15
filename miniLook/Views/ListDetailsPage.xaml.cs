@@ -22,4 +22,14 @@ public sealed partial class ListDetailsPage : Page
     private void OnViewStateChanged(object sender, ListDetailsViewState e)
     {
     }
+
+    private void ArchiveSwipeItem_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    {
+
+    }
+
+    private void ReadSwipeItem_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
+    {
+
+    }
 }

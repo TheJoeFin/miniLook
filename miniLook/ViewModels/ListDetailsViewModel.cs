@@ -2,19 +2,17 @@
 using CommunityToolkit.Graph.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
+using miniLook.Views;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using CommunityToolkit.WinUI.Helpers;
-using Windows.UI.Notifications;
-using Windows.Data.Xml.Dom;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml.Controls;
 
 
 namespace miniLook.ViewModels;
@@ -208,6 +206,75 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.CompactOverlay);
         else
             App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.Default);
+    }
+
+    [RelayCommand]
+    private async Task ArchiveItem(object clickedItem)
+    {
+        if (clickedItem is not MailData listDetailsMenuItem)
+            return;
+
+        await ArchiveThisMailItem(listDetailsMenuItem);
+    }
+
+    public async Task ArchiveThisMailItem(MailData listDetailsMenuItem)
+    {
+        if (_graphClient is null)
+            return;
+
+        MailFolder? archiveFolder = _graphClient.Me
+            .MailFolders
+            .Request()
+            .Filter("displayName eq 'Archive'")
+            .GetAsync()
+            .Result
+            .FirstOrDefault();
+
+        if (archiveFolder is null)
+            return;
+
+        try
+        {
+            _ = await _graphClient.Me
+                .MailFolders
+                .Inbox
+                .Messages[listDetailsMenuItem.Id]
+                .Move(archiveFolder.Id)
+                .Request()
+                .PostAsync();
+        }
+        catch (Exception)
+        {
+#if DEBUG
+            throw;
+#endif
+        }
+
+        UpdateItems();
+    }
+
+    [RelayCommand]
+    private void MarkMessageIsRead(object clickedItem)
+    {
+        if (clickedItem is not MailData listDetailsMenuItem)
+            return;
+
+        MarkMessageIsReadAs(listDetailsMenuItem, true);
+    }
+
+    public void MarkMessageIsReadAs(MailData listDetailsMenuItem, bool isRead)
+    {
+        if (_graphClient is null)
+            return;
+
+        _ = _graphClient.Me
+            .MailFolders
+            .Inbox
+            .Messages[listDetailsMenuItem.Id]
+            .Request()
+            .UpdateAsync(new Message { IsRead = isRead });
+
+        UpdateItems();
     }
 
     private async Task TryToLoadMail()
