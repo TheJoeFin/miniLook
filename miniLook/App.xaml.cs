@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 
@@ -11,7 +13,7 @@ using miniLook.Notifications;
 using miniLook.Services;
 using miniLook.ViewModels;
 using miniLook.Views;
-using System;
+
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
@@ -59,6 +61,7 @@ public partial class App : Application
             services.AddTransient<IActivationHandler, AppNotificationActivationHandler>();
 
             // Services
+            services.AddTransient<IWebViewService, WebViewService>();
             services.AddSingleton<IAppNotificationService, AppNotificationService>();
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
@@ -73,6 +76,8 @@ public partial class App : Application
             services.AddSingleton<IFileService, FileService>();
 
             // Views and ViewModels
+            services.AddTransient<RenderWebViewViewModel>();
+            services.AddTransient<RenderWebViewPage>();
             services.AddTransient<GraphExplainerViewModel>();
             services.AddTransient<GraphExplainerPage>();
             services.AddTransient<SendMailViewModel>();

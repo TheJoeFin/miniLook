@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using miniLook.Helpers;
 using miniLook.Models;
+using miniLook.ViewModels;
 
 namespace miniLook.Views;
 
@@ -32,18 +33,16 @@ public sealed partial class ListDetailsDetailControl : UserControl
         }
     }
 
-    private async void BrowserLink_Click(object sender, RoutedEventArgs e)
+    private void BrowserLink_Click(object sender, RoutedEventArgs e)
     {
-         if (ListDetailsMenuItem is null )
+        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
+
+        if (ListDetailsMenuItem is null
+            || parentListPage is null
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        HtmlViewWindow viewWindow = new()
-        {
-            Title = ListDetailsMenuItem.Subject
-        };
-
-        await viewWindow.SetContent(ListDetailsMenuItem.HtmlBody ?? "No HTML body connent");
-        viewWindow.Show();
+        parentListPage.ViewModel.RenderMailBody(ListDetailsMenuItem);
     }
 
     private void TryUpdateParent()

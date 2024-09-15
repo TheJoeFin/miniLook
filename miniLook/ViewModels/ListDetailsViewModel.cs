@@ -9,7 +9,6 @@ using Microsoft.UI.Xaml;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
-using miniLook.Views;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -275,6 +274,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             .UpdateAsync(new Message { IsRead = isRead });
 
         UpdateItems();
+    }
+
+    public void RenderMailBody(MailData ListDetailsMenuItem)
+    {
+        NavigationService.NavigateTo(typeof(RenderWebViewViewModel).FullName!, ListDetailsMenuItem);
     }
 
     private async Task TryToLoadMail()

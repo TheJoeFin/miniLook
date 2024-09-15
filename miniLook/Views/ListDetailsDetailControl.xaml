@@ -99,7 +99,7 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 Click="BrowserLink_Click"
-                Content="View email in a browser" />
+                Content="Render email in a Web View" />
 
             <StackPanel Padding="0,15,0,0">
                 <TextBlock
