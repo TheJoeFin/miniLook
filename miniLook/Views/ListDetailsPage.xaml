@@ -29,17 +29,17 @@
                     <FontIconSource x:Key="ReadIcon" Glyph="&#xE8C3;" />
                     <SwipeItems x:Key="right" Mode="Execute">
                         <SwipeItem
-                            BehaviorOnInvoked="Close"
+                            BehaviorOnInvoked="RemainOpen"
                             IconSource="{StaticResource ArchiveIcon}"
                             Invoked="ArchiveSwipeItem_Invoked"
                             Text="Archive" />
                     </SwipeItems>
                     <SwipeItems x:Key="left" Mode="Execute">
                         <SwipeItem
-                            BehaviorOnInvoked="RemainOpen"
+                            BehaviorOnInvoked="Close"
                             IconSource="{StaticResource ReadIcon}"
                             Invoked="ReadSwipeItem_Invoked"
-                            Text="Archive" />
+                            Text="Mark Read" />
                     </SwipeItems>
                 </Border.Resources>
 
