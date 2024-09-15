@@ -15,6 +15,8 @@ namespace miniLook.ViewModels;
 // https://docs.microsoft.com/microsoft-edge/webview2/concepts/distribution
 public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAware
 {
+    private MailData? passedMailData;
+
     // TODO: Set the default URL to display.
     [ObservableProperty]
     private Uri source = new("https://docs.microsoft.com/windows/apps/");
@@ -37,10 +39,8 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
     [RelayCommand]
     private async Task OpenInBrowser()
     {
-        if (WebViewService.Source != null)
-        {
+        if (WebViewService.Source is not null)
             await Windows.System.Launcher.LaunchUriAsync(WebViewService.Source);
-        }
     }
 
     [RelayCommand]
@@ -53,9 +53,7 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
     private void BrowserForward()
     {
         if (WebViewService.CanGoForward)
-        {
             WebViewService.GoForward();
-        }
     }
 
     private bool BrowserCanGoForward()
@@ -67,15 +65,13 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
     private void BrowserBack()
     {
         if (WebViewService.CanGoBack)
-        {
             WebViewService.GoBack();
-        }
     }
 
     [RelayCommand]
     private void Close()
     {
-        NavigationService.GoBack();
+        NavigationService.NavigateTo(typeof(ListDetailsViewModel).FullName!, passedMailData);
     }
 
     private bool BrowserCanGoBack()
@@ -87,8 +83,10 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
     {
         if (parameter is MailData mailData)
         {
+            passedMailData = mailData;
             WebViewService.GoToString(mailData.HtmlBody);
         }
+
         WebViewService.NavigationCompleted += OnNavigationCompleted;
     }
 

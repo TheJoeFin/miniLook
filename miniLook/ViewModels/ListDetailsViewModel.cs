@@ -21,7 +21,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private bool loadedMail = false;
 
     [ObservableProperty]
-    private Message? selected;
+    private MailData? selected;
 
     [ObservableProperty]
     private string accountName = string.Empty;
@@ -133,9 +133,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         checkTimer.Tick += CheckTimer_Tick;
 
         if (App.MainWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
-            IsOverlayMode = true;
+        IsOverlayMode = true;
 
-        await TryToLoadMail();
+        if (parameter is MailData mailData)
+            Selected = mailData;
+
+        await TryToLoadMail(Selected);
     }
 
     [RelayCommand]
@@ -281,7 +284,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NavigationService.NavigateTo(typeof(RenderWebViewViewModel).FullName!, ListDetailsMenuItem);
     }
 
-    private async Task TryToLoadMail()
+    private async Task TryToLoadMail(MailData? selectMailData = null)
     {
         if (loadedMail)
             return;
@@ -305,6 +308,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             MailItems.Add(mail);
 
         deltaLink = MailCacheService.DeltaLink;
+
+        Selected = selectMailData;
 
         if (!HasInternet)
         {
