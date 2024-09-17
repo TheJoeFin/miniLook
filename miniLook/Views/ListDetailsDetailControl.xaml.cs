@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using miniLook.Helpers;
 using miniLook.Models;
-using miniLook.ViewModels;
 
 namespace miniLook.Views;
 
@@ -43,6 +42,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
             return;
 
         parentListPage.ViewModel.RenderMailBody(ListDetailsMenuItem);
+        MarkMessageIsReadAs(true);
     }
 
     private void TryUpdateParent()

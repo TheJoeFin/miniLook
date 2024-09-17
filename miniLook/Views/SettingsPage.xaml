@@ -73,7 +73,7 @@
                 x:Uid="Settings_ClearMailCache"
                 Command="{x:Bind ViewModel.ClearCachedDataCommand}"
                 Foreground="Red"
-                IsEnabled="{x:Bind ViewModel.ClearCachedDataCommand.IsRunning, Converter={StaticResource BoolNegation}}"
+                IsEnabled="{x:Bind ViewModel.CanClearCache, Mode=OneWay}"
                 ToolTipService.ToolTip="This could take some time if you have a lot of mail to re-sync the mail" />
 
             <TextBlock x:Uid="Settings_About" Style="{ThemeResource SubtitleTextBlockStyle}" />

@@ -23,6 +23,9 @@ public partial class SettingsViewModel : ObservableRecipient
     [ObservableProperty]
     private string _versionDescription;
 
+    [ObservableProperty]
+    private bool canClearCache = true;
+
     public ICommand SwitchThemeCommand { get; }
 
     public INavigationService NavigationService { get; }
@@ -61,6 +64,7 @@ public partial class SettingsViewModel : ObservableRecipient
     {
         await MailCacheService.ClearMailCacheAsync();
         await MailCacheService.SaveDeltaLink(null);
+        CanClearCache = false;
     }
 
     private static string GetVersionDescription()

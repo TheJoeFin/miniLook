@@ -15,7 +15,7 @@ public partial class MailData: ObservableRecipient
     
     public byte[]? ConversationIndex { get; private set; }
 
-    public string Sender { get; set; } = $"empty@example.com";
+    public string Sender { get; set; } = $"Example (empty@example.com)";
 
     public string Subject { get; set; } = $"No subject";
 
@@ -39,13 +39,16 @@ public partial class MailData: ObservableRecipient
     {
         Id = message.Id;
         IsRead = message.IsRead is true;
-        Sender = message.Sender?.EmailAddress?.Address ?? $"unknown sender";
+        Sender = $"{message.Sender?.EmailAddress.Name} ({message.Sender?.EmailAddress?.Address})" ?? $"unknown sender";
         Subject = message.Subject ?? $"No subject";
         GraphMessage = message;
         WebLink = message.WebLink;
         ReceivedDateTime = message.ReceivedDateTime ?? DateTimeOffset.MinValue;
         ConversationId = message.ConversationId;
         ConversationIndex = message.ConversationIndex;
+
+        if (message.HasAttachments is true)
+            Subject = $"📎 {Subject}";
 
         Body = message.BodyPreview;
 

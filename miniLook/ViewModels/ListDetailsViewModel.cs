@@ -135,8 +135,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (App.MainWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
         IsOverlayMode = true;
 
-        if (parameter is MailData mailData)
-            Selected = mailData;
+        Selected = parameter as MailData;
 
         await TryToLoadMail(Selected);
     }
@@ -224,6 +223,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
+        MailItems.Remove(listDetailsMenuItem);
+
         MailFolder? archiveFolder = _graphClient.Me
             .MailFolders
             .Request()
@@ -251,8 +252,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             throw;
 #endif
         }
-
-        UpdateItems();
     }
 
     [RelayCommand]
@@ -269,14 +268,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
+        listDetailsMenuItem.IsRead = isRead;
+
         _ = _graphClient.Me
             .MailFolders
             .Inbox
             .Messages[listDetailsMenuItem.Id]
             .Request()
             .UpdateAsync(new Message { IsRead = isRead });
-
-        UpdateItems();
     }
 
     public void RenderMailBody(MailData ListDetailsMenuItem)
