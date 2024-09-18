@@ -20,6 +20,8 @@ public interface IWebViewService
         get;
     }
 
+    bool StayInOneWindow { get; set; }
+
     event EventHandler<CoreWebView2WebErrorStatus>? NavigationCompleted;
 
     void Initialize(WebView2 webView);

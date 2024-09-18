@@ -20,6 +20,8 @@ public class WebViewService : IWebViewService
     [MemberNotNullWhen(true, nameof(_webView))]
     public bool CanGoForward => _webView != null && _webView.CanGoForward;
 
+    public bool StayInOneWindow { get; set; } = false;
+
     public event EventHandler<CoreWebView2WebErrorStatus>? NavigationCompleted;
 
     public WebViewService()
@@ -33,6 +35,22 @@ public class WebViewService : IWebViewService
         _webView.NavigationCompleted += OnWebViewNavigationCompleted;
     }
 
+    private void CoreWebView2_NewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
+    {
+        if (!StayInOneWindow)
+        {
+            args.Handled = false;
+            return;
+        }
+
+        args.Handled = true;
+        // No need to wait for the launcher to finish sending the URI to the browser
+        // before we allow the WebView2 in our app to continue.
+        _ = Windows.System.Launcher.LaunchUriAsync(new Uri(args.Uri));
+        // LaunchUriAsync is the WinRT API for launching a URI.
+        // Another option not involving WinRT might be System.Diagnostics.Process.Start(args.Uri);
+    }
+
     public void GoBack() => _webView?.GoBack();
 
     public void GoForward() => _webView?.GoForward();
@@ -41,8 +59,12 @@ public class WebViewService : IWebViewService
 
     public async Task GoToString(string htmlToRender)
     {
-        await _webView?.EnsureCoreWebView2Async();
-        _webView?.NavigateToString(htmlToRender);
+        if (_webView is null)
+            return;
+
+        await _webView.EnsureCoreWebView2Async();
+        _webView.NavigateToString(htmlToRender);
+        _webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
     }
 
     public void UnregisterEvents()

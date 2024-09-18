@@ -47,7 +47,8 @@
                     x:Uid="OpenInBrowserButton"
                     Margin="{StaticResource XSmallLeftTopRightBottomMargin}"
                     Padding="{StaticResource XXSmallLeftTopRightBottomMargin}"
-                    Command="{x:Bind ViewModel.OpenInBrowserCommand}">
+                    Command="{x:Bind ViewModel.OpenInBrowserCommand}"
+                    Visibility="Collapsed">
                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE774;" />
                 </Button>
             </StackPanel>

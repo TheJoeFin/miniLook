@@ -33,6 +33,7 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
     public RenderWebViewViewModel(IWebViewService webViewService, INavigationService navigationService)
     {
         WebViewService = webViewService;
+        WebViewService.StayInOneWindow = true;
         NavigationService = navigationService;
     }
 
