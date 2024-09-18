@@ -25,6 +25,12 @@ public partial class MailData: ObservableRecipient
 
     public string WebLink { get; set; } = string.Empty;
 
+    public bool IsEvent { get; set; } = false;
+
+    public int AttachmentsCount { get; set; } = 0;
+
+    public bool HasAttachments => AttachmentsCount > 0;
+
     public DateTimeOffset ReceivedDateTime { get; set; } = DateTimeOffset.MinValue;
 
     [JsonIgnore]
@@ -46,9 +52,6 @@ public partial class MailData: ObservableRecipient
         ReceivedDateTime = message.ReceivedDateTime ?? DateTimeOffset.MinValue;
         ConversationId = message.ConversationId;
         ConversationIndex = message.ConversationIndex;
-
-        if (message.HasAttachments is true)
-            Subject = $"📎 {Subject}";
 
         Body = message.BodyPreview;
 

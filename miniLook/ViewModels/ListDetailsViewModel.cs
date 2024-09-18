@@ -401,6 +401,28 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     continue;
                 }
 
+                if (message is EventMessageRequestObject eventRequest)
+                {
+                    newMail.IsEvent = true;
+                }
+
+                if (message.HasAttachments is true)
+                {
+                    IMessageAttachmentsCollectionPage result = await _graphClient
+                        .Me.Messages[message.Id]
+                        .Attachments.Request().GetAsync();
+
+                    message.Attachments = result;
+
+                    newMail.AttachmentsCount = result.Count;
+
+                    foreach (Attachment attachment in result)
+                    {
+                        if (attachment is FileAttachment fileAttachment)
+                            Debug.WriteLine("File attachment found: " + fileAttachment.Name);
+                    }
+                }
+
                 if (MailItems.Count == 0)
                 {
                     MailItems.Add(newMail);
