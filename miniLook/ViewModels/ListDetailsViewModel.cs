@@ -223,8 +223,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
-        MailItems.Remove(listDetailsMenuItem);
-
         MailFolder? archiveFolder = _graphClient.Me
             .MailFolders
             .Request()
@@ -236,21 +234,28 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (archiveFolder is null)
             return;
 
-        try
+        List<MailData> allOfConversation = MailItems.Where(m => m.ConversationId == listDetailsMenuItem.ConversationId).ToList();
+
+        foreach (MailData conversationItem in allOfConversation)
         {
-            _ = await _graphClient.Me
-                .MailFolders
-                .Inbox
-                .Messages[listDetailsMenuItem.Id]
-                .Move(archiveFolder.Id)
-                .Request()
-                .PostAsync();
-        }
-        catch (Exception)
-        {
-#if DEBUG
-            throw;
-#endif
+            MailItems.Remove(conversationItem);
+
+            try
+            {
+                _ = await _graphClient.Me
+                    .MailFolders
+                    .Inbox
+                    .Messages[conversationItem.Id]
+                    .Move(archiveFolder.Id)
+                    .Request()
+                    .PostAsync();
+            }
+            catch (Exception)
+            {
+    #if DEBUG
+                throw;
+    #endif
+            }
         }
     }
 
