@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:graph="using:Microsoft.Graph"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:miniControls="using:miniLook.Controls"
     xmlns:miniConverters="using:miniLook.Converters"
     xmlns:models="using:miniLook.Models"
     xmlns:views="using:miniLook.Views"
@@ -55,13 +56,18 @@
                             Background="{ThemeResource AccentFillColorDefaultBrush}"
                             CornerRadius="5"
                             ToolTipService.ToolTip="This mail is Unread"
-                            Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                            Visibility="{x:Bind IsRead,
+                                                Converter={StaticResource boolToVisConverter},
+                                                ConverterParameter=true,
+                                                Mode=OneWay}" />
                         <Grid
                             Grid.Column="1"
                             Margin="{StaticResource SmallLeftMargin}"
                             VerticalAlignment="Center"
                             ColumnSpacing="2"
-                            Opacity="{x:Bind IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
+                            Opacity="{x:Bind IsRead,
+                                             Mode=OneWay,
+                                             Converter={StaticResource isReadToOpacityConverter}}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="auto" />
                                 <RowDefinition Height="auto" />
@@ -108,7 +114,8 @@
                             <MenuFlyout>
                                 <MenuFlyoutItem
                                     x:Name="ArchiveContextMenuItem"
-                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveItemCommand}"
+                                    Command="{Binding ElementName=MailListPage,
+                                                      Path=ViewModel.ArchiveItemCommand}"
                                     CommandParameter="{x:Bind}"
                                     Text="Archive">
                                     <MenuFlyoutItem.Icon>
@@ -117,9 +124,11 @@
                                 </MenuFlyoutItem>
                                 <MenuFlyoutItem
                                     x:Name="MarkReadContextMenuItem"
-                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.MarkMessageIsReadCommand}"
+                                    Command="{Binding ElementName=MailListPage,
+                                                      Path=ViewModel.MarkMessageIsReadCommand}"
                                     CommandParameter="{x:Bind}"
-                                    IsEnabled="{x:Bind isRead, Converter={StaticResource boolNegationConverter}}"
+                                    IsEnabled="{x:Bind isRead,
+                                                       Converter={StaticResource boolNegationConverter}}"
                                     Text="Mark As Read">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon FontSize="14" Glyph="&#xE8C3;" />
@@ -191,7 +200,8 @@
                     RelativePanel.AlignVerticalCenterWithPanel="True"
                     RelativePanel.RightOf="CalendarToggleButton"
                     Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
+                    Text="{x:Bind ViewModel.NumberUnread,
+                                  Mode=OneWay}" />
                 <TextBlock
                     x:Name="UnreadMailText"
                     VerticalAlignment="Center"
@@ -199,7 +209,10 @@
                     RelativePanel.RightOf="UnreadMailNumber"
                     Style="{ThemeResource SubtitleTextBlockStyle}"
                     Text="unread"
-                    ToolTipService.ToolTip="{x:Bind ViewModel.LastSync, Mode=OneWay, Converter={StaticResource stringFormatConverter}, ConverterParameter='{}Last Sync at {0:t}'}" />
+                    ToolTipService.ToolTip="{x:Bind ViewModel.LastSync,
+                                                    Mode=OneWay,
+                                                    Converter={StaticResource stringFormatConverter},
+                                                    ConverterParameter='{}Last Sync at {0:t}'}" />
 
                 <FontIcon
                     x:Name="NoNetworkIcon"
@@ -210,14 +223,18 @@
                     RelativePanel.AlignVerticalCenterWithPanel="True"
                     RelativePanel.RightOf="UnreadMailText"
                     ToolTipService.ToolTip="No network"
-                    Visibility="{x:Bind ViewModel.HasInternet, Mode=OneWay, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
+                    Visibility="{x:Bind ViewModel.HasInternet,
+                                        Mode=OneWay,
+                                        Converter={StaticResource boolToVisConverter},
+                                        ConverterParameter=true}" />
 
                 <ProgressRing
                     Width="16"
                     Height="16"
                     Margin="6"
                     VerticalAlignment="Center"
-                    IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
+                    IsActive="{x:Bind ViewModel.IsLoadingContent,
+                                      Mode=OneWay}"
                     RelativePanel.AlignVerticalCenterWithPanel="True"
                     RelativePanel.RightOf="NoNetworkIcon" />
             </StackPanel>
@@ -231,7 +248,8 @@
                         x:Name="CompactOverlayToggleButton"
                         Command="{x:Bind ViewModel.ToggleOverlayModeCommand}"
                         Icon="BackToWindow"
-                        IsChecked="{x:Bind ViewModel.IsOverlayMode, Mode=OneWay}"
+                        IsChecked="{x:Bind ViewModel.IsOverlayMode,
+                                           Mode=OneWay}"
                         LabelPosition="Collapsed"
                         ToolTipService.ToolTip="Enter Compact Overlay Mode" />
                     <AppBarButton
@@ -280,7 +298,9 @@
             Grid.Row="1"
             Padding="12"
             Background="{ThemeResource ControlFillColorSecondary}"
-            Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
+            Visibility="{x:Bind CalendarToggleButton.IsChecked,
+                                Converter={StaticResource boolToVisConverter},
+                                Mode=OneWay}">
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}">
                 <ItemsRepeater.Layout>
                     <controls:WrapLayout HorizontalSpacing="12" VerticalSpacing="12" />
@@ -301,9 +321,11 @@
                             HorizontalAlignment="Left"
                             Orientation="Horizontal">
                             <HyperlinkButton
-                                NavigateUri="{x:Bind OnlineMeetingUrl, Converter={StaticResource stringUriConverter}}"
+                                NavigateUri="{x:Bind OnlineMeetingUrl,
+                                                     Converter={StaticResource stringUriConverter}}"
                                 ToolTipService.ToolTip="Online meeting link"
-                                Visibility="{x:Bind IsOnlineMeeting.Value, Converter={StaticResource boolToVisConverter}}">
+                                Visibility="{x:Bind IsOnlineMeeting.Value,
+                                                    Converter={StaticResource boolToVisConverter}}">
                                 <Viewbox Height="14">
                                     <SymbolIcon Symbol="Globe" />
                                 </Viewbox>
@@ -322,7 +344,7 @@
                 </DataTemplate>
             </ItemsRepeater>
         </Grid>
-        <controls:ListDetailsView
+        <miniControls:ListDetailsView
             x:Name="ListDetailsViewControl"
             x:Uid="ListDetails"
             Grid.Row="2"
@@ -331,10 +353,12 @@
             BorderBrush="Transparent"
             DetailsTemplate="{StaticResource DetailsTemplate}"
             ItemTemplate="{StaticResource ItemTemplate}"
-            ItemsSource="{x:Bind ViewModel.MailItems, Mode=OneWay}"
+            ItemsSource="{x:Bind ViewModel.MailItems,
+                                 Mode=OneWay}"
             ListHeaderTemplate="{StaticResource ListHeaderTemplate}"
             NoSelectionContentTemplate="{StaticResource NoSelectionContentTemplate}"
-            SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
+            SelectedItem="{x:Bind ViewModel.Selected,
+                                  Mode=TwoWay}"
             ViewStateChanged="OnViewStateChanged" />
 
         <Grid
@@ -347,7 +371,9 @@
             VerticalAlignment="Bottom"
             Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
             CornerRadius="4"
-            Visibility="{x:Bind DebugViewToggleItem.IsChecked, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+            Visibility="{x:Bind DebugViewToggleItem.IsChecked,
+                                Mode=OneWay,
+                                Converter={StaticResource boolToVisConverter}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto" />
                 <RowDefinition Height="*" />
@@ -368,7 +394,8 @@
                 <ToggleButton
                     x:Name="DebugPaneToggleButton"
                     Grid.Column="1"
-                    IsChecked="{x:Bind DebugViewToggleItem.IsChecked, Mode=TwoWay}"
+                    IsChecked="{x:Bind DebugViewToggleItem.IsChecked,
+                                       Mode=TwoWay}"
                     Style="{StaticResource DefaultToggleButtonStyle}">
                     <Viewbox Height="14">
                         <SymbolIcon Symbol="Clear" />
@@ -380,7 +407,8 @@
                     x:Name="DebugText"
                     Margin="10,10"
                     IsTextSelectionEnabled="True"
-                    Text="{x:Bind ViewModel.DebugText, Mode=OneWay}"
+                    Text="{x:Bind ViewModel.DebugText,
+                                  Mode=OneWay}"
                     TextWrapping="WrapWholeWords" />
             </ScrollViewer>
         </Grid>

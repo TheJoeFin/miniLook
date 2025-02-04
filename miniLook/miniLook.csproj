@@ -39,17 +39,18 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Authentication.Msal" Version="7.1.4" />
     <PackageReference Include="CommunityToolkit.Graph" Version="7.1.4" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.1.240916" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.TokenizingTextBox" Version="8.1.240916" />
     <PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.1.240916" />
     <PackageReference Include="CommunityToolkit.WinUI.Helpers" Version="8.1.240916" />
     <PackageReference Include="Dapplo.Windows.User32" Version="1.0.28" />
     <PackageReference Include="Humanizer.Core" Version="3.0.0-beta.54" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.241106002" />
-    <PackageReference Include="Microsoft.Xaml.Behaviors.WinUI.Managed" Version="2.0.9" />
-    <PackageReference Include="WinUIEx" Version="2.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250108002" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.WinUI.Managed" Version="3.0.0" />
+    <PackageReference Include="WinUIEx" Version="2.5.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -63,6 +64,9 @@
 
 
   <ItemGroup>
+    <Page Update="Controls\ListDetailsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <None Update="OAuth.resw">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

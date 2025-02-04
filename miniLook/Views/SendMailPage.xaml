@@ -60,7 +60,8 @@
                 Height="38"
                 VerticalAlignment="Bottom"
                 Command="{x:Bind ViewModel.SendMailCommand}"
-                IsEnabled="{x:Bind ViewModel.CanSend, Mode=OneWay}">
+                IsEnabled="{x:Bind ViewModel.CanSend,
+                                   Mode=OneWay}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Send" />
                     <SymbolIcon Symbol="Send" />
@@ -75,10 +76,12 @@
             x:Name="RecipientTokenizingTextBox"
             Grid.Row="1"
             ItemClick="RecipientTokenizingTextBox_ItemClick"
-            ItemsSource="{x:Bind ViewModel.EmailAddresses, Mode=TwoWay}"
+            ItemsSource="{x:Bind ViewModel.EmailAddresses,
+                                 Mode=TwoWay}"
             LostFocus="RecipientTokenizingTextBox_LostFocus"
             PlaceholderText="Recipients..."
-            SuggestedItemsSource="{x:Bind ViewModel.SuggestedRecipients, Mode=OneWay}"
+            SuggestedItemsSource="{x:Bind ViewModel.SuggestedRecipients,
+                                          Mode=OneWay}"
             TextMemberPath="Name"
             TokenDelimiter=";"
             TokenItemAdding="RecipientTokenizingTextBox_TokenItemAdding">
@@ -102,7 +105,8 @@
             x:Name="SubjectTextBox"
             Grid.Row="2"
             PlaceholderText="Subject..."
-            Text="{x:Bind ViewModel.NewSubject, Mode=TwoWay}" />
+            Text="{x:Bind ViewModel.NewSubject,
+                          Mode=TwoWay}" />
 
         <TextBox
             x:Name="BodyTextBox"
@@ -112,7 +116,9 @@
             PlaceholderText="Body..."
             PreviewKeyDown="BodyTextBox_PreviewKeyDown"
             Style="{StaticResource DefaultTextBoxStyle}"
-            Text="{x:Bind ViewModel.NewBody, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            Text="{x:Bind ViewModel.NewBody,
+                          Mode=TwoWay,
+                          UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="Wrap" />
 
     </Grid>

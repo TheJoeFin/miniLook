@@ -1,6 +1,6 @@
-﻿using CommunityToolkit.WinUI.Controls;
-
+﻿
 using Microsoft.UI.Xaml.Controls;
+using miniLook.Controls;
 using miniLook.Models;
 using miniLook.ViewModels;
 
