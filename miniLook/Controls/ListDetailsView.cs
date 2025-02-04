@@ -168,40 +168,43 @@ public partial class ListDetailsView : ItemsControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (!DesignMode.DesignModeEnabled)
-        {
-            SystemNavigationManager.GetForCurrentView().BackRequested += OnBackRequested;
-            if (_frame != null)
-            {
-                _frame.Navigating -= OnFrameNavigating;
-            }
+        // TODO: update for WinUI3
+        //if (!DesignMode.DesignModeEnabled)
+        //{
+        //    SystemNavigationManager snm = SystemNavigationManager.GetForCurrentView();
+        //    snm.BackRequested += OnBackRequested;
+        //    if (_frame != null)
+        //    {
+        //        _frame.Navigating -= OnFrameNavigating;
+        //    }
 
-            _navigationView = this.FindAscendant<NavigationView.NavigationView>();
-            _frame = this.FindAscendant<Frame>();
-            if (_frame != null)
-            {
-                _frame.Navigating += OnFrameNavigating;
-            }
-        }
+        //    _navigationView = this.FindAscendant<NavigationView.NavigationView>();
+        //    _frame = this.FindAscendant<Frame>();
+        //    if (_frame != null)
+        //    {
+        //        _frame.Navigating += OnFrameNavigating;
+        //    }
+        //}
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        if (DesignMode.DesignModeEnabled == false)
-        {
-            SystemNavigationManager.GetForCurrentView().BackRequested -= OnBackRequested;
-            if (_frame != null)
-            {
-                _frame.Navigating -= OnFrameNavigating;
-            }
+        // TODO: update for WinUI3
+        //if (DesignMode.DesignModeEnabled == false)
+        //{
+        //    SystemNavigationManager.GetForCurrentView().BackRequested -= OnBackRequested;
+        //    if (_frame != null)
+        //    {
+        //        _frame.Navigating -= OnFrameNavigating;
+        //    }
 
-            _selectionStateGroup = (VisualStateGroup)GetTemplateChild(SelectionStates);
-            if (_selectionStateGroup != null)
-            {
-                _selectionStateGroup.CurrentStateChanged -= OnSelectionStateChanged;
-                _selectionStateGroup = null;
-            }
-        }
+        //    _selectionStateGroup = (VisualStateGroup)GetTemplateChild(SelectionStates);
+        //    if (_selectionStateGroup != null)
+        //    {
+        //        _selectionStateGroup.CurrentStateChanged -= OnSelectionStateChanged;
+        //        _selectionStateGroup = null;
+        //    }
+        //}
     }
 
     /// <summary>
