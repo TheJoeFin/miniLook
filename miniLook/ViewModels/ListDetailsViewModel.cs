@@ -114,10 +114,21 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         checkTimer.Start();
     }
 
+    private bool _timerInitialized = false;
+
     public async void OnNavigatedTo(object parameter)
     {
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Navigated to ListView Detail Page\n");
         isSigningOut = false;
+
+        // For singleton usage: don't clear data if already loaded (flyout re-open)
+        if (loadedMail && MailItems.Count > 0)
+        {
+            HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
+            checkTimer.Start();
+            return;
+        }
+
         MailItems.Clear();
         Events.Clear();
 
@@ -130,10 +141,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         MailItems.CollectionChanged += MailItems_CollectionChanged;
 
         checkTimer.Interval = TimeSpan.FromSeconds(10);
-        checkTimer.Tick += CheckTimer_Tick;
 
-        if (App.MainWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
-        IsOverlayMode = true;
+        if (!_timerInitialized)
+        {
+            checkTimer.Tick += CheckTimer_Tick;
+            _timerInitialized = true;
+        }
 
         Selected = parameter as MailData;
 
@@ -524,7 +537,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     public void OnNavigatedFrom()
     {
         App.SetTaskbarBadgeToNumber(NumberUnread);
-        loadedMail = false;
     }
 
     private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
