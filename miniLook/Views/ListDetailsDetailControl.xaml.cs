@@ -1,7 +1,5 @@
-﻿using CommunityToolkit.Authentication;
-using CommunityToolkit.Graph.Extensions;
-using CommunityToolkit.WinUI.Helpers;
-using Microsoft.Graph;
+﻿using CommunityToolkit.WinUI.Helpers;
+using Microsoft.Graph.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using miniLook.Models;
@@ -41,7 +39,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
             return;
 
         ViewModel.RenderMailBody(ListDetailsMenuItem);
-        MarkMessageIsReadAs(true);
+        ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
     }
 
     private void TryUpdateParent()
@@ -55,26 +53,11 @@ public sealed partial class ListDetailsDetailControl : UserControl
     private async void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
         if (ListDetailsMenuItem is null
-            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
+            || !ViewModel.HasGraphClient
             || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
         await ViewModel.ArchiveThisMailItem(ListDetailsMenuItem);
-    }
-
-    private void MarkMessageIsReadAs(bool isRead)
-    {
-        if (ListDetailsMenuItem is null
-            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
-            return;
-
-        GraphServiceClient _graphClient = provider.GetClient();
-        _ = _graphClient.Me
-            .MailFolders
-            .Inbox
-            .Messages[ListDetailsMenuItem.Id]
-            .Request()
-            .UpdateAsync(new Message { IsRead = isRead });
     }
 
     private void ReplyHyperlinkButton_Click(object sender, RoutedEventArgs e)
@@ -82,7 +65,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
         if (!NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        MarkMessageIsReadAs(true);
+        ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
         ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
     }
 
@@ -91,63 +74,30 @@ public sealed partial class ListDetailsDetailControl : UserControl
         if (!NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        MarkMessageIsReadAs(true);
+        ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
         ViewModel.ForwardThisMailItem(ListDetailsMenuItem);
     }
 
     private async void DeleteHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
         if (ListDetailsMenuItem is null
-            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
+            || !ViewModel.HasGraphClient
             || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        GraphServiceClient _graphClient = provider.GetClient();
-
-        MailFolder? deletedFolder = _graphClient.Me
-            .MailFolders
-            .Request()
-            .Filter("displayName eq 'Deleted Items'")
-            .GetAsync()
-            .Result
-            .FirstOrDefault();
-
-        if (deletedFolder is null)
-            return;
-
-        try
-        {
-            // instead of using DeleteAsync() method, we move the message to the Deleted Items folder
-            // this is what Outlook does when you delete a message
-            // not sure about the translation issues with matching the folder name
-
-            _ = await _graphClient.Me
-                .MailFolders
-                .Inbox
-                .Messages[ListDetailsMenuItem.Id]
-                .Move(deletedFolder.Id)
-                .Request()
-                .PostAsync();
-        }
-        catch (Exception)
-        {
-#if DEBUG
-            throw;
-#endif
-        }
-
+        await ViewModel.DeleteThisMailItem(ListDetailsMenuItem);
         TryUpdateParent();
     }
 
     private void MarkReadHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        MarkMessageIsReadAs(true);
+        ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
         TryUpdateParent();
     }
 
     private void MarkUnreadHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        MarkMessageIsReadAs(false);
+        ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, false);
         TryUpdateParent();
     }
 }

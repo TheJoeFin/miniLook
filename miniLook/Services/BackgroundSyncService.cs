@@ -1,5 +1,3 @@
-using CommunityToolkit.Authentication;
-
 using Microsoft.UI.Dispatching;
 
 using miniLook.Contracts.Services;
@@ -35,7 +33,7 @@ public class BackgroundSyncService : IBackgroundSyncService
         _timer.Interval = TimeSpan.FromSeconds(10);
         _timer.Tick += OnTimerTick;
 
-        ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
+        _graphService.AuthenticationStateChanged += OnAuthenticationStateChanged;
 
         if (_graphService.IsAuthenticated)
             _timer.Start();
@@ -47,9 +45,9 @@ public class BackgroundSyncService : IBackgroundSyncService
         _started = false;
     }
 
-    private void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
+    private void OnAuthenticationStateChanged(object? sender, bool isSignedIn)
     {
-        if (args.NewState == ProviderState.SignedIn)
+        if (isSignedIn)
             _timer?.Start();
         else
             _timer?.Stop();

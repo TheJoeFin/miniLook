@@ -1,5 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using System.Text.Json.Serialization;
 
 namespace miniLook.Models;
@@ -43,20 +43,20 @@ public partial class MailData: ObservableRecipient
 
     public MailData(Message message)
     {
-        Id = message.Id;
+        Id = message.Id ?? string.Empty;
         IsRead = message.IsRead is true;
-        Sender = $"{message.Sender?.EmailAddress.Name} ({message.Sender?.EmailAddress?.Address})" ?? $"unknown sender";
+        Sender = $"{message.Sender?.EmailAddress?.Name} ({message.Sender?.EmailAddress?.Address})" ?? $"unknown sender";
         Subject = message.Subject ?? $"No subject";
         GraphMessage = message;
-        WebLink = message.WebLink;
+        WebLink = message.WebLink ?? string.Empty;
         ReceivedDateTime = message.ReceivedDateTime ?? DateTimeOffset.MinValue;
-        ConversationId = message.ConversationId;
+        ConversationId = message.ConversationId ?? string.Empty;
         ConversationIndex = message.ConversationIndex;
 
-        Body = message.BodyPreview;
+        Body = message.BodyPreview ?? string.Empty;
 
         if (message.Body is not null && message.Body.ContentType == BodyType.Html)
-            HtmlBody = message.Body.Content;
+            HtmlBody = message.Body.Content ?? string.Empty;
     }
 
     public override bool Equals(object? obj)

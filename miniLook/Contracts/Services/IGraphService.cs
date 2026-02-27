@@ -1,9 +1,17 @@
-﻿namespace miniLook.Contracts.Services;
+﻿using Microsoft.Graph;
+
+namespace miniLook.Contracts.Services;
 public interface IGraphService
 {
-    public bool IsAuthenticated { get; set; }
+    bool IsAuthenticated { get; }
+
+    GraphServiceClient? Client { get; }
+
+    event EventHandler<bool>? AuthenticationStateChanged;
+
+    Task InitializeAsync();
 
     Task SignInAsync();
 
-    Task InitializeAsync();
+    Task SignOutAsync();
 }

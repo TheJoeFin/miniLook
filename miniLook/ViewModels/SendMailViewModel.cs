@@ -1,8 +1,7 @@
-﻿using CommunityToolkit.Authentication;
-using CommunityToolkit.Graph.Extensions;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
@@ -36,9 +35,12 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
 
     INavigationService NavigationService { get; }
 
-    public SendMailViewModel(INavigationService navigationService)
+    IGraphService GraphService { get; }
+
+    public SendMailViewModel(INavigationService navigationService, IGraphService graphService)
     {
         NavigationService = navigationService;
+        GraphService = graphService;
     }
 
     public ObservableCollection<EmailAddress> SuggestedRecipients { get; set; } = [];
@@ -112,7 +114,8 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         foreach (EmailAddress email in EmailAddresses)
             recipientList.Add(new Recipient { EmailAddress = email });
 
-        if (ProviderManager.Instance.GlobalProvider?.GetClient() is not GraphServiceClient graphClient)
+        GraphServiceClient? graphClient = GraphService.Client;
+        if (graphClient is null)
             return;
 
         Message message = new()
@@ -127,9 +130,22 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         };
 
         if (messageReplyingTo is not null)
-            await graphClient.Me.Messages[messageReplyingTo.Id].Reply(message).Request().PostAsync();
+        {
+            await graphClient.Me.Messages[messageReplyingTo.Id].Reply
+                .PostAsync(new Microsoft.Graph.Me.Messages.Item.Reply.ReplyPostRequestBody
+                {
+                    Message = message
+                });
+        }
         else
-            await graphClient.Me.SendMail(message, true).Request().PostAsync();
+        {
+            await graphClient.Me.SendMail
+                .PostAsync(new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
+                {
+                    Message = message,
+                    SaveToSentItems = true
+                });
+        }
 
         NavigationService.GoBack();
     }
@@ -149,7 +165,8 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         foreach (EmailAddress email in EmailAddresses)
             recipientList.Add(new Recipient { EmailAddress = email });
 
-        if (ProviderManager.Instance.GlobalProvider?.GetClient() is not GraphServiceClient graphClient)
+        GraphServiceClient? graphClient = GraphService.Client;
+        if (graphClient is null)
             return;
 
         Message message = new()
@@ -163,7 +180,12 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
             ToRecipients = recipientList,
         };
 
-        await graphClient.Me.SendMail(message, true).Request().PostAsync();
+        await graphClient.Me.SendMail
+            .PostAsync(new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
+            {
+                Message = message,
+                SaveToSentItems = true
+            });
 
         NavigationService.GoBack();
     }
@@ -198,14 +220,18 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
 
     private async Task loadSuggestedEmails()
     {
-        if (ProviderManager.Instance.GlobalProvider?.GetClient() is not GraphServiceClient graphClient)
+        GraphServiceClient? graphClient = GraphService.Client;
+        if (graphClient is null)
             return;
 
-        IUserPeopleCollectionPage recentPeople = await graphClient.Me.People.Request().GetAsync();
+        var peopleResponse = await graphClient.Me.People.GetAsync();
 
         SuggestedRecipients.Clear();
 
-        foreach (Person person in recentPeople)
+        if (peopleResponse?.Value is null)
+            return;
+
+        foreach (Person person in peopleResponse.Value)
         {
             if (person.ScoredEmailAddresses == null
                 || !person.ScoredEmailAddresses.Any()

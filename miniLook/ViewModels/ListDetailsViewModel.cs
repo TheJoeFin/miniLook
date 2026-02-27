@@ -1,9 +1,9 @@
-﻿using CommunityToolkit.Authentication;
-using CommunityToolkit.Graph.Extensions;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
+using Microsoft.Graph.Me.MailFolders.Item.Messages.Delta;
+using Microsoft.Graph.Models;
 using Microsoft.UI.Windowing;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
@@ -46,8 +46,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private GraphServiceClient? _graphClient;
 
-    private object? deltaLink = null;
-    private IMessageDeltaCollectionPage? previousPage = null;
+    public bool HasGraphClient => _graphClient is not null;
+
+    private string? deltaLink = null;
     private bool isSyncingMail = false;
     private bool isSigningOut = false;
 
@@ -95,7 +96,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             DebugText = DebugText.Insert(0, $"Graph Client is null, returning\n");
 
             if (HasInternet)
-                _graphClient = ProviderManager.Instance.GlobalProvider?.GetClient();
+                _graphClient = GraphService.Client;
 
             return;
         }
@@ -126,8 +127,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
 
-        ProviderManager.Instance.ProviderStateChanged -= OnProviderStateChanged;
-        ProviderManager.Instance.ProviderStateChanged += OnProviderStateChanged;
+        GraphService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        GraphService.AuthenticationStateChanged += OnAuthenticationStateChanged;
 
         MailItems.CollectionChanged -= MailItems_CollectionChanged;
         MailItems.CollectionChanged += MailItems_CollectionChanged;
@@ -163,7 +164,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         App.SetUpcomingEvents([]);
 
         deltaLink = null;
-        previousPage = null;
 
         MailCacheService.DeltaLink = null;
         await MailCacheService.ClearMailCacheAsync();
@@ -177,14 +177,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         isSigningOut = true;
         await ClearOutContents();
-        await ProviderManager.Instance.GlobalProvider?.SignOutAsync();
+        await GraphService.SignOutAsync();
+        _graphClient = null;
         NavigationService.NavigateTo(typeof(WelcomeViewModel).FullName!);
     }
 
     [RelayCommand]
     private async Task SignIn()
     {
-        ProviderManager.Instance.GlobalProvider = null;
         await GraphService.SignInAsync();
     }
 
@@ -219,13 +219,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
-        MailFolder? archiveFolder = _graphClient.Me
+        var foldersResponse = await _graphClient.Me
             .MailFolders
-            .Request()
-            .Filter("displayName eq 'Archive'")
-            .GetAsync()
-            .Result
-            .FirstOrDefault();
+            .GetAsync(config =>
+            {
+                config.QueryParameters.Filter = "displayName eq 'Archive'";
+            });
+
+        MailFolder? archiveFolder = foldersResponse?.Value?.FirstOrDefault();
 
         if (archiveFolder is null)
             return;
@@ -239,12 +240,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             try
             {
                 _ = await _graphClient.Me
-                    .MailFolders
-                    .Inbox
+                    .MailFolders["Inbox"]
                     .Messages[conversationItem.Id]
-                    .Move(archiveFolder.Id)
-                    .Request()
-                    .PostAsync();
+                    .Move
+                    .PostAsync(new Microsoft.Graph.Me.MailFolders.Item.Messages.Item.Move.MovePostRequestBody
+                    {
+                        DestinationId = archiveFolder.Id
+                    });
             }
             catch (Exception)
             {
@@ -264,19 +266,56 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         MarkMessageIsReadAs(listDetailsMenuItem, true);
     }
 
-    public void MarkMessageIsReadAs(MailData listDetailsMenuItem, bool isRead)
+    public void MarkMessageIsReadAs(MailData? listDetailsMenuItem, bool isRead)
     {
-        if (_graphClient is null)
+        if (_graphClient is null || listDetailsMenuItem is null)
             return;
 
         listDetailsMenuItem.IsRead = isRead;
 
         _ = _graphClient.Me
-            .MailFolders
-            .Inbox
+            .MailFolders["Inbox"]
             .Messages[listDetailsMenuItem.Id]
-            .Request()
-            .UpdateAsync(new Message { IsRead = isRead });
+            .PatchAsync(new Message { IsRead = isRead });
+    }
+
+    public async Task DeleteThisMailItem(MailData listDetailsMenuItem)
+    {
+        if (_graphClient is null)
+            return;
+
+        var foldersResponse = await _graphClient.Me
+            .MailFolders
+            .GetAsync(config =>
+            {
+                config.QueryParameters.Filter = "displayName eq 'Deleted Items'";
+            });
+
+        MailFolder? deletedFolder = foldersResponse?.Value?.FirstOrDefault();
+
+        if (deletedFolder is null)
+            return;
+
+        try
+        {
+            // Move to Deleted Items instead of hard delete (matches Outlook behavior)
+            _ = await _graphClient.Me
+                .MailFolders["Inbox"]
+                .Messages[listDetailsMenuItem.Id]
+                .Move
+                .PostAsync(new Microsoft.Graph.Me.MailFolders.Item.Messages.Item.Move.MovePostRequestBody
+                {
+                    DestinationId = deletedFolder.Id
+                });
+        }
+        catch (Exception)
+        {
+#if DEBUG
+            throw;
+#endif
+        }
+
+        MailItems.Remove(listDetailsMenuItem);
     }
 
     public void NavigateToMailDetail(MailData mailData)
@@ -297,9 +336,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         loadedMail = true;
 
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Trying to load mail\n");
-        if (ProviderManager.Instance.GlobalProvider is not IProvider provider)
+        if (!GraphService.IsAuthenticated || GraphService.Client is null)
         {
-            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Provider is not provider, returning\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Not authenticated, triggering sign-in\n");
+            loadedMail = false;
+            await GraphService.SignInAsync();
             return;
         }
 
@@ -322,9 +363,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
         }
 
-        _graphClient = provider.GetClient();
-        User me = await _graphClient.Me.Request().GetAsync();
-        AccountName = me.DisplayName;
+        _graphClient = GraphService.Client;
+        var me = await _graphClient.Me.GetAsync();
+        AccountName = me?.DisplayName ?? string.Empty;
 
         await GetEvents();
         await SyncMail();
@@ -339,7 +380,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null
             || !HasInternet
             || isSigningOut
-            || ProviderManager.Instance.GlobalProvider is not IProvider provider
+            || !GraphService.IsAuthenticated
             || isSyncingMail)
         {
             DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Graph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return\n");
@@ -348,33 +389,31 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         isSyncingMail = true;
 
-        IMessageDeltaCollectionPage currentPageOfMessages;
+        DeltaGetResponse? currentPage;
 
         if (deltaLink is not null)
         {
-            previousPage ??= new MessageDeltaCollectionPage();
-
-            previousPage.InitializeNextPageRequest(_graphClient, deltaLink.ToString());
-            currentPageOfMessages = await previousPage.NextPageRequest.GetAsync();
+            currentPage = await new DeltaRequestBuilder(deltaLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
         }
         else
         {
             try
             {
-                currentPageOfMessages = await _graphClient.Me.MailFolders.Inbox.Messages
-                    .Delta()
-                    .Request()
-                    .GetAsync();
+                currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync();
             }
             catch (Exception)
             {
+                isSyncingMail = false;
                 return;
             }
         }
 
         do
         {
-            foreach (Message message in currentPageOfMessages)
+            if (currentPage?.Value is null)
+                break;
+
+            foreach (Message message in currentPage.Value)
             {
                 if (isSigningOut || !HasInternet)
                 {
@@ -404,25 +443,26 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     continue;
                 }
 
-                if (message is EventMessageRequestObject eventRequest)
+                if (message.OdataType == "#microsoft.graph.eventMessageRequest")
                 {
                     newMail.IsEvent = true;
                 }
 
                 if (message.HasAttachments is true)
                 {
-                    IMessageAttachmentsCollectionPage result = await _graphClient
+                    var result = await _graphClient
                         .Me.Messages[message.Id]
-                        .Attachments.Request().GetAsync();
+                        .Attachments.GetAsync();
 
-                    message.Attachments = result;
-
-                    newMail.AttachmentsCount = result.Count;
-
-                    foreach (Attachment attachment in result)
+                    if (result?.Value is not null)
                     {
-                        if (attachment is FileAttachment fileAttachment)
-                            Debug.WriteLine("File attachment found: " + fileAttachment.Name);
+                        newMail.AttachmentsCount = result.Value.Count;
+
+                        foreach (Attachment attachment in result.Value)
+                        {
+                            if (attachment is FileAttachment fileAttachment)
+                                Debug.WriteLine("File attachment found: " + fileAttachment.Name);
+                        }
                     }
                 }
 
@@ -450,18 +490,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     MailItems.Add(newMail);
             }
 
-            previousPage = currentPageOfMessages;
+            if (currentPage.OdataNextLink is not null)
+                currentPage = await new DeltaRequestBuilder(currentPage.OdataNextLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
+            else
+                break;
         }
-        while (currentPageOfMessages.NextPageRequest is not null
-        && (currentPageOfMessages = await currentPageOfMessages.NextPageRequest.GetAsync()) is not null);
+        while (currentPage is not null);
 
-        object? outDeltaLink = null;
-        bool successInGettingDeltaLink = currentPageOfMessages?.AdditionalData.TryGetValue("@odata.deltaLink", out outDeltaLink) is true;
-
-        if (successInGettingDeltaLink)
+        if (currentPage?.OdataDeltaLink is not null)
         {
-            deltaLink = outDeltaLink;
-            await MailCacheService.SaveDeltaLink(deltaLink?.ToString());
+            deltaLink = currentPage.OdataDeltaLink;
+            await MailCacheService.SaveDeltaLink(deltaLink);
             await MailCacheService.SaveEmailsAsync(MailItems);
         }
 
@@ -486,30 +525,32 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         DateTime now = DateTime.UtcNow;
         DateTime endOfWeek = now.AddDays(2);
 
-        List<QueryOption> queryOptions =
-        [
-            new QueryOption("startDateTime", now.ToString("o")),
-            new QueryOption("endDateTime", endOfWeek.ToString("o"))
-        ];
-
         try
         {
-            // Get the user's mailbox settings to determine
-            // their time zone
-            User user = await _graphClient.Me.Request()
-                .Select(u => new { u.MailboxSettings })
-                .GetAsync();
+            // Get the user's mailbox settings to determine their time zone
+            var user = await _graphClient.Me.GetAsync(config =>
+            {
+                config.QueryParameters.Select = ["mailboxSettings"];
+            });
 
-            IUserCalendarViewCollectionPage events = await _graphClient.Me.CalendarView.Request(queryOptions)
-                    .Header("Prefer", $"outlook.timezone=\"{user.MailboxSettings.TimeZone}\"")
-                    .OrderBy("start/dateTime")
-                    .Top(4)
-                    .GetAsync();
+            string timeZone = user?.MailboxSettings?.TimeZone ?? "UTC";
+
+            var eventsResponse = await _graphClient.Me.CalendarView.GetAsync(config =>
+            {
+                config.QueryParameters.StartDateTime = now.ToString("o");
+                config.QueryParameters.EndDateTime = endOfWeek.ToString("o");
+                config.QueryParameters.Orderby = ["start/dateTime"];
+                config.QueryParameters.Top = 4;
+                config.Headers.Add("Prefer", $"outlook.timezone=\"{timeZone}\"");
+            });
 
             Events.Clear();
 
-            foreach (Event ev in events)
-                Events.Add(ev);
+            if (eventsResponse?.Value is not null)
+            {
+                foreach (Event ev in eventsResponse.Value)
+                    Events.Add(ev);
+            }
         }
         catch (Exception)
         {
@@ -525,13 +566,13 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         App.SetTaskbarBadgeToNumber(NumberUnread);
     }
 
-    private async void OnProviderStateChanged(object? sender, ProviderStateChangedEventArgs args)
+    private async void OnAuthenticationStateChanged(object? sender, bool isSignedIn)
     {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Provider state changed to {args.NewState}\n");
-        if (args.NewState != ProviderState.SignedIn || ProviderManager.Instance.GlobalProvider is not IProvider provider)
+        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Auth state changed to {isSignedIn}\n");
+        if (!isSignedIn)
             return;
 
-        if (!loadedMail && provider?.State == ProviderState.SignedIn)
+        if (!loadedMail && GraphService.IsAuthenticated)
             await TryToLoadMail();
     }
 
