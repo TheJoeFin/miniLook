@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.WinUI.UI.Controls;
-
-using Microsoft.UI.Xaml.Controls;
+﻿using Microsoft.UI.Xaml.Controls;
 using miniLook.Models;
 using miniLook.ViewModels;
 
@@ -19,8 +17,12 @@ public sealed partial class ListDetailsPage : Page
         InitializeComponent();
     }
 
-    private void OnViewStateChanged(object sender, ListDetailsViewState e)
+    private void MailListView_ItemClick(object sender, ItemClickEventArgs e)
     {
+        if (e.ClickedItem is MailData mailData)
+        {
+            ViewModel.NavigateToMailDetail(mailData);
+        }
     }
 
     private async void ArchiveSwipeItem_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)

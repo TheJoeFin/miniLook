@@ -1,0 +1,29 @@
+<Page
+    x:Class="miniLook.Views.MailDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:views="using:miniLook.Views"
+    mc:Ignorable="d">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Button
+            Command="{x:Bind ViewModel.GoBackCommand}"
+            Style="{StaticResource NavigationBackButtonNormalStyle}">
+            <Button.KeyboardAccelerators>
+                <KeyboardAccelerator Key="Escape" />
+                <KeyboardAccelerator Key="Left" Modifiers="Menu" />
+            </Button.KeyboardAccelerators>
+        </Button>
+
+        <views:ListDetailsDetailControl
+            Grid.Row="1"
+            ListDetailsMenuItem="{x:Bind ViewModel.MailItem, Mode=OneWay}" />
+    </Grid>
+</Page>

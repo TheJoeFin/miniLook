@@ -2,14 +2,13 @@
     x:Class="miniLook.Views.ListDetailsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
-    xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
+    xmlns:converters="using:CommunityToolkit.WinUI.Converters"
+    xmlns:ctLayouts="using:CommunityToolkit.WinUI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:graph="using:Microsoft.Graph"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:miniConverters="using:miniLook.Converters"
     xmlns:models="using:miniLook.Models"
-    xmlns:views="using:miniLook.Views"
     x:Name="MailListPage"
     mc:Ignorable="d">
     <Page.Resources>
@@ -132,31 +131,7 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="DetailsTemplate">
-            <Grid>
-                <views:ListDetailsDetailControl ListDetailsMenuItem="{Binding}" />
-            </Grid>
-        </DataTemplate>
 
-        <DataTemplate x:Key="NoSelectionContentTemplate">
-            <Grid>
-                <TextBlock
-                    x:Uid="ListDetails_NoSelection"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    TextAlignment="Center" />
-            </Grid>
-        </DataTemplate>
-
-        <DataTemplate x:Key="ListHeaderTemplate">
-            <Grid Height="40">
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Style="{StaticResource ListTitleStyle}"
-                    Text="{Binding}" />
-            </Grid>
-        </DataTemplate>
     </Page.Resources>
 
     <Grid x:Name="ContentArea">
@@ -283,7 +258,7 @@
             Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}">
                 <ItemsRepeater.Layout>
-                    <controls:WrapLayout HorizontalSpacing="12" VerticalSpacing="12" />
+                    <ctLayouts:WrapLayout HorizontalSpacing="12" VerticalSpacing="12" />
                 </ItemsRepeater.Layout>
                 <DataTemplate x:DataType="graph:Event">
                     <Grid
@@ -322,20 +297,17 @@
                 </DataTemplate>
             </ItemsRepeater>
         </Grid>
-        <controls:ListDetailsView
-            x:Name="ListDetailsViewControl"
-            x:Uid="ListDetails"
+        <ListView
+            x:Name="MailListView"
             Grid.Row="2"
-            BackButtonBehavior="Inline"
             Background="Transparent"
             BorderBrush="Transparent"
-            DetailsTemplate="{StaticResource DetailsTemplate}"
+            IsItemClickEnabled="True"
+            ItemClick="MailListView_ItemClick"
             ItemTemplate="{StaticResource ItemTemplate}"
             ItemsSource="{x:Bind ViewModel.MailItems, Mode=OneWay}"
-            ListHeaderTemplate="{StaticResource ListHeaderTemplate}"
-            NoSelectionContentTemplate="{StaticResource NoSelectionContentTemplate}"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
-            ViewStateChanged="OnViewStateChanged" />
+            SelectionMode="Single" />
 
         <Grid
             x:Name="DebugPane"

@@ -4,13 +4,15 @@ using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using miniLook.Helpers;
 using miniLook.Models;
+using miniLook.ViewModels;
 
 namespace miniLook.Views;
 
 public sealed partial class ListDetailsDetailControl : UserControl
 {
+    private ListDetailsViewModel ViewModel { get; } = App.GetService<ListDetailsViewModel>();
+
     public MailData? ListDetailsMenuItem
     {
         get => GetValue(ListDetailsMenuItemProperty) as MailData;
@@ -34,46 +36,36 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private void BrowserLink_Click(object sender, RoutedEventArgs e)
     {
-        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-
         if (ListDetailsMenuItem is null
-            || parentListPage is null
             || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        parentListPage.ViewModel.RenderMailBody(ListDetailsMenuItem);
+        ViewModel.RenderMailBody(ListDetailsMenuItem);
         MarkMessageIsReadAs(true);
     }
 
     private void TryUpdateParent()
     {
-        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-        if (parentListPage is null || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+        if (!NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        parentListPage.ViewModel.UpdateItems();
+        ViewModel.UpdateItems();
     }
 
     private async void ArchiveHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-
         if (ListDetailsMenuItem is null
             || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
-            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable
-            || parentListPage is null)
+            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
-        await parentListPage.ViewModel.ArchiveThisMailItem(ListDetailsMenuItem);
+        await ViewModel.ArchiveThisMailItem(ListDetailsMenuItem);
     }
 
     private void MarkMessageIsReadAs(bool isRead)
     {
-        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-
         if (ListDetailsMenuItem is null
-            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider
-            || parentListPage is null)
+            || ProviderManager.Instance.GlobalProvider is not MsalProvider provider)
             return;
 
         GraphServiceClient _graphClient = provider.GetClient();
@@ -87,24 +79,20 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private void ReplyHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-        if (parentListPage is null
-            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+        if (!NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
         MarkMessageIsReadAs(true);
-        parentListPage.ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
+        ViewModel.ReplyToThisMailItem(ListDetailsMenuItem);
     }
 
     private void ForwardHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
-        ListDetailsPage? parentListPage = this.FindParentOfType<ListDetailsPage>();
-        if (parentListPage is null
-            || !NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
+        if (!NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable)
             return;
 
         MarkMessageIsReadAs(true);
-        parentListPage.ViewModel.ForwardThisMailItem(ListDetailsMenuItem);
+        ViewModel.ForwardThisMailItem(ListDetailsMenuItem);
     }
 
     private async void DeleteHyperlinkButton_Click(object sender, RoutedEventArgs e)

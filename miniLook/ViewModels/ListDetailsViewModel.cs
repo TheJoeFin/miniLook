@@ -296,6 +296,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             .UpdateAsync(new Message { IsRead = isRead });
     }
 
+    public void NavigateToMailDetail(MailData mailData)
+    {
+        NavigationService.NavigateTo(typeof(MailDetailViewModel).FullName!, mailData);
+    }
+
     public void RenderMailBody(MailData ListDetailsMenuItem)
     {
         NavigationService.NavigateTo(typeof(RenderWebViewViewModel).FullName!, ListDetailsMenuItem);
