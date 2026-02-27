@@ -5,7 +5,6 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
 using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
@@ -45,7 +44,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public ObservableCollection<Event> Events { get; private set; } = [];
 
-    public DispatcherTimer checkTimer = new();
     private GraphServiceClient? _graphClient;
 
     private object? deltaLink = null;
@@ -84,19 +82,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
         if (!IsLoadingContent)
-            CheckTimer_Tick(null, null);
+            RunBackgroundSync();
     }
 
-    private async void CheckTimer_Tick(object? sender, object? e)
+    public async void RunBackgroundSync()
     {
         HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
 
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Check new timer tick\n");
-        checkTimer.Stop();
         if (_graphClient is null)
         {
             DebugText = DebugText.Insert(0, $"Graph Client is null, returning\n");
-            checkTimer.Start();
 
             if (HasInternet)
                 _graphClient = ProviderManager.Instance.GlobalProvider?.GetClient();
@@ -111,10 +107,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         await SyncMail();
 
         IsLoadingContent = false;
-        checkTimer.Start();
     }
-
-    private bool _timerInitialized = false;
 
     public async void OnNavigatedTo(object parameter)
     {
@@ -125,7 +118,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (loadedMail && MailItems.Count > 0)
         {
             HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
-            checkTimer.Start();
             return;
         }
 
@@ -139,14 +131,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         MailItems.CollectionChanged -= MailItems_CollectionChanged;
         MailItems.CollectionChanged += MailItems_CollectionChanged;
-
-        checkTimer.Interval = TimeSpan.FromSeconds(10);
-
-        if (!_timerInitialized)
-        {
-            checkTimer.Tick += CheckTimer_Tick;
-            _timerInitialized = true;
-        }
 
         Selected = parameter as MailData;
 
@@ -169,15 +153,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private void Refresh()
     {
         if (!IsLoadingContent)
-            CheckTimer_Tick(null, null);
+            RunBackgroundSync();
     }
 
     private async Task ClearOutContents()
     {
         MailItems.Clear();
         Events.Clear();
-
-        checkTimer.Stop();
+        App.SetUpcomingEvents([]);
 
         deltaLink = null;
         previousPage = null;
@@ -335,7 +318,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         if (!HasInternet)
         {
-            checkTimer.Start();
             IsLoadingContent = false;
             return;
         }
@@ -349,8 +331,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         IsLoadingContent = false;
         await MailCacheService.SaveEmailsAsync(MailItems);
-
-        checkTimer.Start();
     }
 
     private async Task SyncMail()
@@ -536,6 +516,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
         }
 
+        App.SetUpcomingEvents(Events);
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Events gotten\n");
     }
 

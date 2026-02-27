@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Graph;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -26,6 +29,8 @@ using Microsoft.UI.Xaml.Input;
 
 using WinUIEx;
 
+using Application = Microsoft.UI.Xaml.Application;
+
 namespace miniLook;
 
 public partial class App : Application
@@ -37,6 +42,7 @@ public partial class App : Application
     private DispatcherQueueTimer? _restoreEventMonitorTimer;
 
     private int _lastUnreadCount = 0;
+    private List<Event> _upcomingEvents = [];
 
     public IHost Host { get; }
 
@@ -78,6 +84,7 @@ public partial class App : Application
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IMailCacheService, MailCacheService>();
             services.AddSingleton<IGraphService, GraphService>();
+            services.AddSingleton<IBackgroundSyncService, BackgroundSyncService>();
 
             // Core Services
             services.AddSingleton<ISampleDataService, SampleDataService>();
@@ -167,6 +174,8 @@ public partial class App : Application
         await UpdateTrayIconAsync();
         UpdateTrayTooltip();
         StartRestoreEventMonitor();
+
+        GetService<IBackgroundSyncService>().Start();
     }
 
     #region Tray Icon
@@ -296,12 +305,14 @@ public partial class App : Application
 
         if (_lastUnreadCount > 0)
         {
-            // TODO: Replace with custom new-mail icons when provided
-            iconUri = "Assets/mouseIcon.ico";
+            iconUri = "Assets/email.ico";
+        }
+        else if (HasImminentEvent())
+        {
+            iconUri = "Assets/Calendar.ico";
         }
         else
         {
-            // TODO: Replace with custom no-mail icons when provided
             iconUri = "Assets/mouseIcon.ico";
         }
 
@@ -340,6 +351,28 @@ public partial class App : Application
         {
             return true;
         }
+    }
+
+    private bool HasImminentEvent()
+    {
+        DateTimeOffset now = DateTimeOffset.Now;
+
+        return _upcomingEvents.Any(ev =>
+        {
+            if (ev.IsAllDay is true)
+                return false;
+
+            if (!DateTimeOffset.TryParse(ev.Start?.DateTime, out DateTimeOffset start)
+                || !DateTimeOffset.TryParse(ev.End?.DateTime, out DateTimeOffset end))
+                return false;
+
+            // Skip multi-day events (spans more than 24 hours)
+            if ((end - start).TotalHours >= 24)
+                return false;
+
+            TimeSpan untilStart = start - now;
+            return untilStart > TimeSpan.Zero && untilStart <= TimeSpan.FromMinutes(10);
+        });
     }
 
     private void OnColorValuesChanged(UISettings sender, object args)
@@ -419,6 +452,15 @@ public partial class App : Application
             app._lastUnreadCount = number;
             _ = app.UpdateTrayIconAsync();
             app.UpdateTrayTooltip();
+        }
+    }
+
+    public static void SetUpcomingEvents(IEnumerable<Event> events)
+    {
+        if (Current is App app)
+        {
+            app._upcomingEvents = events.ToList();
+            _ = app.UpdateTrayIconAsync();
         }
     }
 
