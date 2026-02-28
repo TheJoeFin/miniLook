@@ -6,6 +6,7 @@
     xmlns:converters="using:CommunityToolkit.WinUI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:miniLook.Models"
     xmlns:tc="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
     <UserControl.Resources>
@@ -13,6 +14,7 @@
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -265,10 +267,50 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!--  Attachments strip  -->
+        <ItemsControl
+            x:Name="AttachmentsPanel"
+            Grid.Row="1"
+            Padding="16,6,16,6"
+            ItemsSource="{x:Bind ListDetailsMenuItem.Attachments, Mode=OneWay}"
+            Visibility="{x:Bind ListDetailsMenuItem.HasAttachments, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <tc:WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:AttachmentInfo">
+                    <Button
+                        Margin="0,0,6,4"
+                        Padding="8,6"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        Click="AttachmentButton_Click"
+                        CornerRadius="6"
+                        Tag="{x:Bind}"
+                        ToolTipService.ToolTip="{x:Bind Name}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                Glyph="&#xE8A5;" />
+                            <TextBlock
+                                MaxWidth="180"
+                                VerticalAlignment="Center"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="{x:Bind Name}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
         <!--  Body: plain text view (shown by default)  -->
         <ScrollViewer
             x:Name="BodyScrollViewer"
-            Grid.Row="1"
+            Grid.Row="2"
             Padding="16,10,16,16">
             <StackPanel Spacing="0">
                 <TextBlock
@@ -288,7 +330,7 @@
         <!--  Body: HTML web view (shown when "Render in Web View" is clicked)  -->
         <Grid
             x:Name="WebViewPane"
-            Grid.Row="1"
+            Grid.Row="2"
             Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

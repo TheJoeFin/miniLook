@@ -54,6 +54,8 @@ public partial class MailData : ObservableRecipient, IJsonOnDeserialized
 
     public bool HasAttachments => AttachmentsCount > 0;
 
+    public List<AttachmentInfo> Attachments { get; set; } = [];
+
     public DateTimeOffset ReceivedDateTime { get; set; } = DateTimeOffset.MinValue;
 
     public string RelativeReceivedDateTime => ReceivedDateTime != DateTimeOffset.MinValue

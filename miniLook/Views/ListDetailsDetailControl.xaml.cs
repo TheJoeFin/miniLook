@@ -225,6 +225,34 @@ public sealed partial class ListDetailsDetailControl : UserControl
         TryUpdateParent();
     }
 
+    private async void AttachmentButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not Models.AttachmentInfo attachment || ListDetailsMenuItem is null)
+            return;
+
+        byte[]? content = attachment.ContentBytes;
+
+        if (content is null || content.Length == 0)
+            content = await ViewModel.GetAttachmentContentAsync(ListDetailsMenuItem.Id, attachment.Id);
+
+        if (content is null || content.Length == 0)
+            return;
+
+        try
+        {
+            string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), attachment.Name);
+            await System.IO.File.WriteAllBytesAsync(tempPath, content);
+            attachment.ContentBytes = content;
+
+            Windows.Storage.StorageFile file = await Windows.Storage.StorageFile.GetFileFromPathAsync(tempPath);
+            await Windows.System.Launcher.LaunchFileAsync(file);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to open attachment: {ex.Message}");
+        }
+    }
+
     private void MarkReadHyperlinkButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);

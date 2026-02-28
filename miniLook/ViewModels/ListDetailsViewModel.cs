@@ -488,6 +488,25 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NavigationService.NavigateTo(typeof(RenderWebViewViewModel).FullName!, ListDetailsMenuItem);
     }
 
+    public async Task<byte[]?> GetAttachmentContentAsync(string messageId, string attachmentId)
+    {
+        if (_graphClient is null)
+            return null;
+
+        try
+        {
+            Attachment? attachment = await _graphClient.Me.Messages[messageId].Attachments[attachmentId].GetAsync();
+            if (attachment is FileAttachment fileAttachment)
+                return fileAttachment.ContentBytes;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Attachments] Failed to fetch content for attachment {attachmentId}: {ex.Message}");
+        }
+
+        return null;
+    }
+
     public void RenderHtmlBody(MailData mail)
     {
         string mailId = mail.Id ?? string.Empty;
@@ -683,7 +702,16 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                                 foreach (Attachment attachment in result.Value)
                                 {
                                     if (attachment is FileAttachment fileAttachment)
+                                    {
+                                        newMail.Attachments.Add(new Models.AttachmentInfo
+                                        {
+                                            Id = fileAttachment.Id ?? string.Empty,
+                                            Name = fileAttachment.Name ?? string.Empty,
+                                            ContentType = fileAttachment.ContentType ?? string.Empty,
+                                            ContentBytes = fileAttachment.ContentBytes,
+                                        });
                                         Debug.WriteLine("File attachment found: " + fileAttachment.Name);
+                                    }
                                 }
                             }
                         }
