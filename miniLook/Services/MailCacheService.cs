@@ -90,5 +90,6 @@ internal class MailCacheService : IMailCacheService
         catch (IOException)
         {
         }
+        // TODO: Handle exceptions properly, maybe with retry logic
     }
 }

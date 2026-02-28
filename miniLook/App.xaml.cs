@@ -61,6 +61,8 @@ public partial class App : Application
 
     public static Dictionary<string, Views.MailItemWindow> MailItemWindows { get; } = [];
 
+    public static Dictionary<string, Views.HtmlViewWindow> HtmlViewWindows { get; } = [];
+
     public static UIElement? AppTitlebar { get; set; }
 
     public App()

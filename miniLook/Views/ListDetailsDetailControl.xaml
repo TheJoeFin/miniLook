@@ -6,131 +6,323 @@
     xmlns:converters="using:CommunityToolkit.WinUI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:tc="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="boolToVisibility" />
     </UserControl.Resources>
-    <ScrollViewer
-        x:Name="ForegroundElement"
-        Padding="10,4"
-        HorizontalAlignment="Stretch"
-        IsTabStop="True"
-        VerticalScrollMode="Enabled">
-        <StackPanel HorizontalAlignment="Left">
-            <TextBlock
-                Margin="{StaticResource SmallLeftMargin}"
-                VerticalAlignment="Center"
-                IsTextSelectionEnabled="True"
-                Style="{ThemeResource TitleTextBlockStyle}"
-                Text="{x:Bind ListDetailsMenuItem.Subject, Mode=OneWay}"
-                TextWrapping="WrapWholeWords" />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-            <CommandBar
-                HorizontalAlignment="Left"
-                Background="Transparent"
-                DefaultLabelPosition="Right">
-                <AppBarButton
-                    Click="ReplyHyperlinkButton_Click"
-                    Icon="MailReply"
-                    Label="Reply"
-                    ToolTipService.ToolTip="Reply to this currently selected email">
-                    <AppBarButton.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="R" Modifiers="Control" />
-                    </AppBarButton.KeyboardAccelerators>
-                </AppBarButton>
-                <AppBarButton
-                    Click="MarkReadHyperlinkButton_Click"
-                    Label="Mark Read"
-                    ToolTipService.ToolTip="Mark this current email as Read"
-                    Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}, ConverterParameter=true}">
-                    <AppBarButton.Icon>
-                        <FontIcon FontSize="14" Glyph="&#xE8C3;" />
-                    </AppBarButton.Icon>
-                    <AppBarButton.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="Q" Modifiers="Control" />
-                    </AppBarButton.KeyboardAccelerators>
-                </AppBarButton>
-                <AppBarButton
-                    Click="MarkUnreadHyperlinkButton_Click"
-                    Label="Mark Unread"
-                    ToolTipService.ToolTip="Mark this current email as Unread"
-                    Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
-                    <AppBarButton.Icon>
-                        <FontIcon FontSize="14" Glyph="&#xE715;" />
-                    </AppBarButton.Icon>
-                    <AppBarButton.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="U" Modifiers="Control" />
-                    </AppBarButton.KeyboardAccelerators>
-                </AppBarButton>
-                <AppBarButton
-                    Click="ArchiveHyperlinkButton_Click"
-                    Label="Archive"
-                    ToolTipService.ToolTip="Archive this current email">
-                    <AppBarButton.Icon>
-                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
-                    </AppBarButton.Icon>
-                    <AppBarButton.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="Delete" />
-                    </AppBarButton.KeyboardAccelerators>
-                </AppBarButton>
-                <AppBarButton
-                    Click="DeleteHyperlinkButton_Click"
-                    Icon="Delete"
-                    Label="Delete"
-                    ToolTipService.ToolTip="Move this email to Deleted Items">
-                    <AppBarButton.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="Delete" Modifiers="Shift" />
-                    </AppBarButton.KeyboardAccelerators>
-                </AppBarButton>
-                <AppBarButton
-                    Click="ForwardHyperlinkButton_Click"
-                    Icon="MailForward"
-                    Label="Forward"
-                    ToolTipService.ToolTip="Forward this currently selected email">
-                    <AppBarButton.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="F" Modifiers="Control" />
-                    </AppBarButton.KeyboardAccelerators>
-                </AppBarButton>
+        <!--  Metadata: action bar + sender / recipients / date  -->
+        <ScrollViewer
+            x:Name="ForegroundElement"
+            Grid.Row="0"
+            Padding="8,2,8,0"
+            HorizontalAlignment="Stretch"
+            IsTabStop="True"
+            VerticalScrollMode="Auto">
+            <StackPanel Spacing="0">
 
-            </CommandBar>
+                <!--  Compact action bar  -->
+                <CommandBar DefaultLabelPosition="Right">
+                    <AppBarButton
+                        Click="ReplyHyperlinkButton_Click"
+                        Icon="MailReply"
+                        Label="Reply"
+                        ToolTipService.ToolTip="Reply (Ctrl+R)">
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="R" Modifiers="Control" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton
+                        Click="ForwardHyperlinkButton_Click"
+                        Icon="MailForward"
+                        Label="Forward"
+                        ToolTipService.ToolTip="Forward (Ctrl+F)">
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="F" Modifiers="Control" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarSeparator />
+                    <AppBarButton
+                        Click="MarkReadHyperlinkButton_Click"
+                        Label="Mark Read"
+                        ToolTipService.ToolTip="Mark as Read (Ctrl+Q)"
+                        Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}, ConverterParameter=true}">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xE8C3;" />
+                        </AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="Q" Modifiers="Control" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton
+                        Click="MarkUnreadHyperlinkButton_Click"
+                        Label="Mark Unread"
+                        ToolTipService.ToolTip="Mark as Unread (Ctrl+U)"
+                        Visibility="{x:Bind ListDetailsMenuItem.IsRead, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xE715;" />
+                        </AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="U" Modifiers="Control" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton
+                        Click="ArchiveHyperlinkButton_Click"
+                        Label="Archive"
+                        ToolTipService.ToolTip="Archive (Del)">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xE7B8;" />
+                        </AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="Delete" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton
+                        Click="DeleteHyperlinkButton_Click"
+                        Icon="Delete"
+                        Label="Delete"
+                        ToolTipService.ToolTip="Delete (Shift+Del)">
+                        <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="Delete" Modifiers="Shift" />
+                        </AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <CommandBar.SecondaryCommands>
+                        <AppBarButton
+                            Click="PopOutButton_Click"
+                            Label="Pop out"
+                            ToolTipService.ToolTip="Open this email in a new window">
+                            <AppBarButton.Icon>
+                                <SymbolIcon Symbol="NewWindow" />
+                            </AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar.SecondaryCommands>
+                </CommandBar>
 
-            <HyperlinkButton
-                x:Name="BrowserLink"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Click="BrowserLink_Click"
-                Content="Render email in a Web View" />
+                <!--  Divider  -->
+                <Rectangle
+                    Height="1"
+                    Margin="0,6,0,10"
+                    HorizontalAlignment="Stretch"
+                    Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-            <StackPanel Padding="0,15,0,0">
-                <TextBlock
-                    IsTextSelectionEnabled="True"
-                    Style="{StaticResource DetailSubTitleStyle}"
-                    Text="From" />
+                <!--  Sender — click to reveal email address  -->
+                <tc:WrapPanel>
 
-                <TextBlock
-                    IsTextSelectionEnabled="True"
-                    Style="{StaticResource DetailBodyBaseMediumStyle}"
-                    Text="{x:Bind ListDetailsMenuItem.Sender, Mode=OneWay}" />
+                    <Button
+                        x:Name="SenderButton"
+                        Padding="2"
+                        Background="Transparent"
+                        BorderBrush="Transparent"
+                        Click="SenderButton_Click"
+                        CornerRadius="6"
+                        ToolTipService.ToolTip="{x:Bind ListDetailsMenuItem.SenderAddress, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                Glyph="&#xE77B;" />
+                            <StackPanel Spacing="2">
+                                <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}" Text="{x:Bind ListDetailsMenuItem.SenderDisplayName, Mode=OneWay}" />
+                                <TextBlock
+                                    x:Name="SenderAddressText"
+                                    Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                    IsTextSelectionEnabled="True"
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind ListDetailsMenuItem.SenderAddress, Mode=OneWay}"
+                                    Visibility="Collapsed" />
+                            </StackPanel>
+                            <FontIcon
+                                x:Name="SenderChevron"
+                                VerticalAlignment="Center"
+                                FontSize="10"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Glyph="&#xE76C;" />
+                        </StackPanel>
+                    </Button>
 
-                <TextBlock
-                    Margin="{StaticResource SmallTopMargin}"
-                    Style="{StaticResource DetailSubTitleStyle}"
-                    Text="Received Date" />
-                <TextBlock
-                    IsTextSelectionEnabled="True"
-                    Style="{StaticResource DetailBodyBaseMediumStyle}"
-                    Text="{x:Bind ListDetailsMenuItem.ReceivedDateTime, Mode=OneWay}" />
+                    <!--  To recipients — click to expand full addresses  -->
+                    <Button
+                        x:Name="ToButton"
+                        Margin="0,2,0,0"
+                        Padding="2"
+                        Background="Transparent"
+                        BorderBrush="Transparent"
+                        Click="ToButton_Click"
+                        CornerRadius="6"
+                        ToolTipService.ToolTip="{x:Bind ListDetailsMenuItem.ToRecipientsFull, Mode=OneWay}"
+                        Visibility="{x:Bind ListDetailsMenuItem.HasToRecipients, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                Glyph="&#xE716;" />
+                            <StackPanel Spacing="2">
+                                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="To..." />
+                                <TextBlock
+                                    x:Name="ToFullText"
+                                    Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                    IsTextSelectionEnabled="True"
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind ListDetailsMenuItem.ToRecipientsFull, Mode=OneWay}"
+                                    Visibility="Collapsed" />
+                            </StackPanel>
+                            <FontIcon
+                                x:Name="ToChevron"
+                                VerticalAlignment="Center"
+                                FontSize="10"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Glyph="&#xE76C;" />
+                        </StackPanel>
+                    </Button>
 
-                <TextBlock
-                    Margin="{StaticResource SmallTopMargin}"
-                    Style="{StaticResource DetailSubTitleStyle}"
-                    Text="Body" />
-                <TextBlock
-                    IsTextSelectionEnabled="True"
-                    Style="{StaticResource DetailBodyBaseMediumStyle}"
-                    Text="{x:Bind ListDetailsMenuItem.Body, Mode=OneWay}" />
+                    <!--  CC recipients — only visible when present  -->
+                    <Button
+                        x:Name="CcButton"
+                        Margin="0,2,0,0"
+                        Padding="2"
+                        Background="Transparent"
+                        BorderBrush="Transparent"
+                        Click="CcButton_Click"
+                        CornerRadius="6"
+                        ToolTipService.ToolTip="{x:Bind ListDetailsMenuItem.CcRecipientsFull, Mode=OneWay}"
+                        Visibility="{x:Bind ListDetailsMenuItem.HasCcRecipients, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Glyph="&#xE716;" />
+                            <StackPanel Spacing="2">
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{ThemeResource BodyTextBlockStyle}"
+                                    Text="CC..." />
+                                <TextBlock
+                                    x:Name="CcFullText"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    IsTextSelectionEnabled="True"
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind ListDetailsMenuItem.CcRecipientsFull, Mode=OneWay}"
+                                    Visibility="Collapsed" />
+                            </StackPanel>
+                            <FontIcon
+                                x:Name="CcChevron"
+                                VerticalAlignment="Center"
+                                FontSize="10"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                Glyph="&#xE76C;" />
+                        </StackPanel>
+                    </Button>
+
+                    <!--  Received date — tooltip shows exact time, click toggles  -->
+                    <Button
+                        x:Name="DateButton"
+                        Margin="0,2,0,0"
+                        Padding="6,5"
+                        HorizontalAlignment="Left"
+                        HorizontalContentAlignment="Left"
+                        Background="Transparent"
+                        BorderBrush="Transparent"
+                        Click="DateButton_Click"
+                        CornerRadius="6"
+                        ToolTipService.ToolTip="{x:Bind ListDetailsMenuItem.FormattedReceivedDateTime, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                Glyph="&#xE787;" />
+                            <TextBlock
+                                x:Name="RelativeDateText"
+                                VerticalAlignment="Center"
+                                Style="{ThemeResource BodyTextBlockStyle}"
+                                Text="{x:Bind ListDetailsMenuItem.RelativeReceivedDateTime, Mode=OneWay}" />
+                            <TextBlock
+                                x:Name="ExactDateText"
+                                VerticalAlignment="Center"
+                                Style="{ThemeResource BodyTextBlockStyle}"
+                                Text="{x:Bind ListDetailsMenuItem.FormattedReceivedDateTime, Mode=OneWay}"
+                                Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                </tc:WrapPanel>
+
+                <!--  Divider before body  -->
+                <Rectangle
+                    Height="1"
+                    Margin="0,10,0,0"
+                    HorizontalAlignment="Stretch"
+                    Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
             </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+
+        <!--  Body: plain text view (shown by default)  -->
+        <ScrollViewer
+            x:Name="BodyScrollViewer"
+            Grid.Row="1"
+            Padding="16,10,16,16">
+            <StackPanel Spacing="0">
+                <TextBlock
+                    IsTextSelectionEnabled="True"
+                    Style="{StaticResource DetailBodyStyle}"
+                    Text="{x:Bind ListDetailsMenuItem.Body, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+                <HyperlinkButton
+                    Margin="0,8,0,0"
+                    HorizontalAlignment="Center"
+                    Click="BrowserLink_Click"
+                    Content="Render in a Web View"
+                    Visibility="{x:Bind ListDetailsMenuItem.HasHtmlBody, Mode=OneWay, Converter={StaticResource boolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--  Body: HTML web view (shown when "Render in Web View" is clicked)  -->
+        <Grid
+            x:Name="WebViewPane"
+            Grid.Row="1"
+            Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Border
+                Grid.Row="0"
+                Padding="8,4"
+                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1">
+                <Button
+                    Padding="6,4"
+                    HorizontalAlignment="Left"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Click="BackToTextButton_Click"
+                    CornerRadius="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                            Glyph="&#xE76B;" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="Text view" />
+                    </StackPanel>
+                </Button>
+            </Border>
+            <WebView2
+                x:Name="BodyWebView"
+                Grid.Row="1"
+                CoreWebView2Initialized="BodyWebView_CoreWebView2Initialized" />
+        </Grid>
+
+    </Grid>
 </UserControl>

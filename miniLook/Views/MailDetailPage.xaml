@@ -13,17 +13,29 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Button
-            Command="{x:Bind ViewModel.GoBackCommand}"
-            Style="{StaticResource NavigationBackButtonNormalStyle}">
-            <Button.KeyboardAccelerators>
-                <KeyboardAccelerator Key="Escape" />
-                <KeyboardAccelerator Key="Left" Modifiers="Menu" />
-            </Button.KeyboardAccelerators>
-        </Button>
+        <!--  Back button and subject on the same row  -->
+        <Grid Grid.Row="0" Padding="0,2,8,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button Command="{x:Bind ViewModel.GoBackCommand}" Style="{StaticResource NavigationBackButtonNormalStyle}">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Escape" />
+                    <KeyboardAccelerator Key="Left" Modifiers="Menu" />
+                </Button.KeyboardAccelerators>
+            </Button>
+            <TextBlock
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                IsTextSelectionEnabled="True"
+                MaxLines="2"
+                Style="{ThemeResource SubtitleTextBlockStyle}"
+                Text="{x:Bind ViewModel.MailItem.Subject, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="WrapWholeWords" />
+        </Grid>
 
-        <views:ListDetailsDetailControl
-            Grid.Row="1"
-            ListDetailsMenuItem="{x:Bind ViewModel.MailItem, Mode=OneWay}" />
+        <views:ListDetailsDetailControl Grid.Row="1" ListDetailsMenuItem="{x:Bind ViewModel.MailItem, Mode=OneWay}" />
     </Grid>
 </Page>

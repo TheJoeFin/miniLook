@@ -332,6 +332,22 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         window.Activate();
     }
 
+    public void PopOutMailItem(MailData mail)
+    {
+        string mailId = mail.Id ?? string.Empty;
+
+        if (App.MailItemWindows.TryGetValue(mailId, out Views.MailItemWindow? existing))
+        {
+            existing.Activate();
+            return;
+        }
+
+        Views.MailItemWindow window = new(mail);
+        App.MailItemWindows[mailId] = window;
+        window.Closed += (s, e) => App.MailItemWindows.Remove(mailId);
+        window.Activate();
+    }
+
     public async Task ArchiveThisMailItem(MailData listDetailsMenuItem)
     {
         if (_graphClient is null)
@@ -455,6 +471,24 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     public void RenderMailBody(MailData ListDetailsMenuItem)
     {
         NavigationService.NavigateTo(typeof(RenderWebViewViewModel).FullName!, ListDetailsMenuItem);
+    }
+
+    public void RenderHtmlBody(MailData mail)
+    {
+        string mailId = mail.Id ?? string.Empty;
+
+        if (App.HtmlViewWindows.TryGetValue(mailId, out Views.HtmlViewWindow? existing))
+        {
+            existing.Activate();
+            return;
+        }
+
+        Views.HtmlViewWindow window = new();
+        window.Title = mail.Subject ?? "miniLook";
+        App.HtmlViewWindows[mailId] = window;
+        window.Closed += (s, e) => App.HtmlViewWindows.Remove(mailId);
+        window.Activate();
+        _ = window.SetContent(mail.HtmlBody);
     }
 
     private async Task TryToLoadMail(MailData? selectMailData = null)
