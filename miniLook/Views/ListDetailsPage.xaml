@@ -251,15 +251,15 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
                         IsHitTestVisible="False"
-                        Value="{x:Bind ViewModel.FocusedUnreadCount, Mode=OneWay}"
-                        Visibility="{x:Bind ViewModel.HasFocusedUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}" />
+                        Visibility="{x:Bind ViewModel.HasFocusedUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}"
+                        Value="{x:Bind ViewModel.FocusedUnreadCount, Mode=OneWay}" />
                     <InfoBadge
                         x:Name="OtherInfoBadge"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
                         IsHitTestVisible="False"
-                        Value="{x:Bind ViewModel.OtherUnreadCount, Mode=OneWay}"
-                        Visibility="{x:Bind ViewModel.HasOtherUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}" />
+                        Visibility="{x:Bind ViewModel.HasOtherUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}"
+                        Value="{x:Bind ViewModel.OtherUnreadCount, Mode=OneWay}" />
                 </Grid>
                 <FontIcon
                     x:Name="NoNetworkIcon"
@@ -388,7 +388,25 @@
             ItemClick="MailListView_ItemClick"
             ItemTemplate="{StaticResource ItemTemplate}"
             ItemsSource="{x:Bind ViewModel.FilteredConversationGroups, Mode=OneWay}"
-            SelectionMode="None" />
+            SelectionMode="None">
+            <ListView.Footer>
+                <HyperlinkButton
+                    Margin="8,4,8,12"
+                    Padding="12,8"
+                    HorizontalAlignment="Stretch"
+                    Command="{x:Bind ViewModel.LoadMoreMonthsCommand}"
+                    ToolTipService.ToolTip="Extend the loaded email history by one more month"
+                    Visibility="{x:Bind ViewModel.HasOlderMail, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <SymbolIcon Symbol="Download" />
+                        <TextBlock Text="Load 1 more month of email" />
+                    </StackPanel>
+                </HyperlinkButton>
+            </ListView.Footer>
+        </ListView>
 
         <Grid
             x:Name="DebugPane"

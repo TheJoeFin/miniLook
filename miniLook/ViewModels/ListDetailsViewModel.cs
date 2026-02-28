@@ -40,6 +40,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private bool isFocusedView = true;
 
     [ObservableProperty]
+    private bool hasOlderMail = false;
+
+    private int mailWindowMonths = 2;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasFocusedUnread))]
     private int focusedUnreadCount = 0;
 
@@ -67,7 +72,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     private bool isSigningOut = false;
 
     [ObservableProperty]
-    private string debugText = $"{DateTime.Now.ToShortDateString()} debug text begins";
+    private string debugText = $"{DateTime.Now:d} debug text begins";
 
     private INavigationService NavigationService { get; }
 
@@ -190,7 +195,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
 
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Check new timer tick\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Check new timer tick\n");
         if (_graphClient is null)
         {
             DebugText = DebugText.Insert(0, $"Graph Client is null, returning\n");
@@ -206,13 +211,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         IsLoadingContent = true;
         await GetEvents();
         await SyncMail();
+        await CheckForOlderMailAsync();
 
         IsLoadingContent = false;
     }
 
     public async void OnNavigatedTo(object parameter)
     {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Navigated to ListView Detail Page\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Navigated to ListView Detail Page\n");
         isSigningOut = false;
 
         // For singleton usage: don't clear data if already loaded (flyout re-open)
@@ -378,7 +384,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (archiveFolder is null)
             return;
 
-        List<MailData> allOfConversation = MailItems.Where(m => m.ConversationId == listDetailsMenuItem.ConversationId).ToList();
+        List<MailData> allOfConversation = [.. MailItems.Where(m => m.ConversationId == listDetailsMenuItem.ConversationId)];
 
         foreach (MailData conversationItem in allOfConversation)
             MailItems.Remove(conversationItem);
@@ -566,10 +572,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         loadedMail = true;
 
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Trying to load mail\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Trying to load mail\n");
         if (!GraphService.IsAuthenticated || GraphService.Client is null)
         {
-            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Not authenticated, triggering sign-in\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Not authenticated, triggering sign-in\n");
             loadedMail = false;
             await GraphService.SignInAsync();
             return;
@@ -578,6 +584,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         IsLoadingContent = true;
 
         await MailCacheService.InitializeAsync();
+        mailWindowMonths = MailCacheService.MailWindowMonths;
 
         IEnumerable<MailData> tempMailItems = await MailCacheService.GetEmailsAsync();
 
@@ -602,6 +609,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         await GetEvents();
         await SyncMail();
+        await CheckForOlderMailAsync();
 
         IsLoadingContent = false;
         await MailCacheService.SaveEmailsAsync(MailItems);
@@ -609,14 +617,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async Task SyncMail()
     {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Syncing Mail\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Syncing Mail\n");
         if (_graphClient is null
             || !HasInternet
             || isSigningOut
             || !GraphService.IsAuthenticated
             || isSyncingMail)
         {
-            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Graph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Graph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return\n");
             return;
         }
 
@@ -624,12 +632,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         try
         {
+            DateTime syncCutoff = DateTime.UtcNow.AddMonths(-mailWindowMonths);
+            string initialSyncFilter = "receivedDateTime ge " + syncCutoff.ToString("yyyy-MM-ddTHH:mm:ss") + "Z";
             DeltaGetResponse? currentPage;
 
             if (deltaLink is not null)
             {
                 Debug.WriteLine($"[Sync] Using existing delta link: {deltaLink[..Math.Min(80, deltaLink.Length)]}...");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Using existing delta link\n");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Using existing delta link\n");
                 try
                 {
                     currentPage = await new DeltaRequestBuilder(deltaLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
@@ -637,22 +647,24 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[Sync] Delta link request failed, resetting to full sync: {ex.Message}");
-                    DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Delta link failed, doing full sync\n");
+                    DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Delta link failed, doing full sync\n");
                     deltaLink = null;
                     MailCacheService.DeltaLink = null;
                     currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync(config =>
                     {
                         config.QueryParameters.Select = ["id", "isRead", "sender", "toRecipients", "ccRecipients", "subject", "bodyPreview", "webLink", "receivedDateTime", "conversationId", "inferenceClassification", "hasAttachments"];
+                        config.QueryParameters.Filter = initialSyncFilter;
                     });
                 }
             }
             else
             {
                 Debug.WriteLine("[Sync] No delta link, starting full delta sync.");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: No delta link, starting full sync\n");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: No delta link, starting full sync\n");
                 currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync(config =>
                 {
                     config.QueryParameters.Select = ["id", "isRead", "sender", "toRecipients", "ccRecipients", "subject", "bodyPreview", "webLink", "receivedDateTime", "conversationId", "inferenceClassification", "hasAttachments"];
+                    config.QueryParameters.Filter = initialSyncFilter;
                 });
             }
 
@@ -665,7 +677,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 if (currentPage?.Value is null)
                 {
                     Debug.WriteLine($"[Sync] Page {pageNumber}: Value is null, stopping pagination.");
-                    DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Page {pageNumber} Value is null, stopping\n");
+                    DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Page {pageNumber} Value is null, stopping\n");
                     break;
                 }
 
@@ -677,7 +689,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     .Max(m => m.ReceivedDateTime);
 
                 Debug.WriteLine($"[Sync] Page {pageNumber}: {currentPage.Value.Count} messages, oldest={oldest}, newest={newest}, hasNextLink={currentPage.OdataNextLink is not null}, hasDeltaLink={currentPage.OdataDeltaLink is not null}");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Page {pageNumber}: {currentPage.Value.Count} msgs, oldest={oldest:g}, newest={newest:g}\n");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Page {pageNumber}: {currentPage.Value.Count} msgs, oldest={oldest:g}, newest={newest:g}\n");
 
                 int addedCount = 0;
                 int updatedCount = 0;
@@ -793,7 +805,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 }
 
                 Debug.WriteLine($"[Sync] Page {pageNumber} processed: added={addedCount}, updated={updatedCount}, removed={removedCount}, sparseSkipped={skippedSparseCount}");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Page {pageNumber} done: +{addedCount} ~{updatedCount} -{removedCount} sparse={skippedSparseCount}\n");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Page {pageNumber} done: +{addedCount} ~{updatedCount} -{removedCount} sparse={skippedSparseCount}\n");
 
                 if (currentPage.OdataNextLink is not null)
                 {
@@ -805,21 +817,21 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     catch (Exception ex)
                     {
                         Debug.WriteLine($"[Sync] Failed to fetch page {pageNumber + 1}: {ex.Message}");
-                        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Failed to fetch page {pageNumber + 1}: {ex.Message}\n");
+                        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Failed to fetch page {pageNumber + 1}: {ex.Message}\n");
                         break;
                     }
                 }
                 else
                 {
                     Debug.WriteLine($"[Sync] No more pages after page {pageNumber}. HasDeltaLink={currentPage.OdataDeltaLink is not null}");
-                    DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: No more pages after page {pageNumber}\n");
+                    DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: No more pages after page {pageNumber}\n");
                     break;
                 }
             }
             while (currentPage is not null);
 
             Debug.WriteLine($"[Sync] Pagination complete after {pageNumber} pages. Total MailItems={MailItems.Count}. HasDeltaLink={currentPage?.OdataDeltaLink is not null}");
-            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Done {pageNumber} pages, {MailItems.Count} total items, deltaLink={currentPage?.OdataDeltaLink is not null}\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Done {pageNumber} pages, {MailItems.Count} total items, deltaLink={currentPage?.OdataDeltaLink is not null}\n");
 
             if (currentPage?.OdataDeltaLink is not null)
             {
@@ -830,7 +842,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             else
             {
                 Debug.WriteLine("[Sync] WARNING: No delta link received — next sync will do a full re-fetch.");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: WARNING no delta link received\n");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: WARNING no delta link received\n");
             }
         }
         catch (Exception ex)
@@ -844,18 +856,57 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
             App.SetTaskbarBadgeToNumber(NumberUnread);
             RebuildConversationGroups();
-            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Mail synced\n");
         }
+    }
+
+    private async Task CheckForOlderMailAsync()
+    {
+        if (_graphClient is null || !HasInternet || isSigningOut)
+            return;
+
+        DateTime cutoff = DateTime.UtcNow.AddMonths(-mailWindowMonths);
+        string isoDate = cutoff.ToString("yyyy-MM-ddTHH:mm:ss") + "Z";
+        try
+        {
+            MessageCollectionResponse? resp = await _graphClient.Me.MailFolders["Inbox"].Messages.GetAsync(config =>
+            {
+                config.QueryParameters.Filter = $"receivedDateTime lt {isoDate}";
+                config.QueryParameters.Top = 1;
+                config.QueryParameters.Select = ["id"];
+            });
+            HasOlderMail = resp?.Value?.Count > 0;
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task LoadMoreMonths()
+    {
+        if (IsLoadingContent || _graphClient is null)
+            return;
+
+        mailWindowMonths++;
+        await MailCacheService.SaveMailWindowMonthsAsync(mailWindowMonths);
+
+        deltaLink = null;
+        await MailCacheService.SaveDeltaLink(null);
+
+        IsLoadingContent = true;
+        await SyncMail();
+        await CheckForOlderMailAsync();
+        IsLoadingContent = false;
+        await MailCacheService.SaveEmailsAsync(MailItems);
     }
 
     private async Task GetEvents()
     {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Getting Events\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Getting Events\n");
         if (isSigningOut
             || !HasInternet
             || _graphClient is null)
         {
-            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Graph client is null {_graphClient is null} caused return\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Graph client is null {_graphClient is null} caused return\n");
             return;
         }
 
@@ -895,7 +946,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         }
 
         App.SetUpcomingEvents(Events);
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Events gotten\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Events gotten\n");
     }
 
     public void OnNavigatedFrom()
@@ -905,7 +956,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private async void OnAuthenticationStateChanged(object? sender, bool isSignedIn)
     {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Auth state changed to {isSignedIn}\n");
+        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Auth state changed to {isSignedIn}\n");
         if (!isSignedIn)
             return;
 

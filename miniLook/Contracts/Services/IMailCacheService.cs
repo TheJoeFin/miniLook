@@ -14,4 +14,8 @@ public interface IMailCacheService
     Task SaveEmailsAsync(IEnumerable<MailData> allMailData);
 
     Task ClearMailCacheAsync();
+
+    int MailWindowMonths { get; set; }
+
+    Task SaveMailWindowMonthsAsync(int months);
 }
