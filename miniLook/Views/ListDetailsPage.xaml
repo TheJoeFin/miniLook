@@ -235,13 +235,32 @@
                     ToolTipService.ToolTip="Show a couple of events in the next couple days">
                     <SymbolIcon Symbol="Calendar" />
                 </ToggleButton>
-                <SelectorBar x:Name="FocusedOtherSelectorBar" SelectionChanged="FocusedOtherSelectorBar_SelectionChanged">
-                    <SelectorBarItem
-                        x:Name="FocusedSelectorBarItem"
-                        IsSelected="True"
-                        Text="Focused" />
-                    <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
-                </SelectorBar>
+                <Grid x:Name="SelectorBarContainer">
+                    <SelectorBar
+                        x:Name="FocusedOtherSelectorBar"
+                        SelectionChanged="FocusedOtherSelectorBar_SelectionChanged"
+                        SizeChanged="FocusedOtherSelectorBar_SizeChanged">
+                        <SelectorBarItem
+                            x:Name="FocusedSelectorBarItem"
+                            IsSelected="True"
+                            Text="Focused" />
+                        <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
+                    </SelectorBar>
+                    <InfoBadge
+                        x:Name="FocusedInfoBadge"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False"
+                        Value="{x:Bind ViewModel.FocusedUnreadCount, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.HasFocusedUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}" />
+                    <InfoBadge
+                        x:Name="OtherInfoBadge"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False"
+                        Value="{x:Bind ViewModel.OtherUnreadCount, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.HasOtherUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}" />
+                </Grid>
                 <FontIcon
                     x:Name="NoNetworkIcon"
                     Margin="6"

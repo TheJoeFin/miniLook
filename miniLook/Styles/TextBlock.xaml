@@ -30,6 +30,7 @@
         BasedOn="{StaticResource BaseTextBlockStyle}"
         TargetType="TextBlock">
         <Setter Property="FontSize" Value="14" />
+        <Setter Property="Opacity" Value="0.8" />
         <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="MaxLines" Value="1" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />

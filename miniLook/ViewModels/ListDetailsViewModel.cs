@@ -39,6 +39,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private bool isFocusedView = true;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFocusedUnread))]
+    private int focusedUnreadCount = 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOtherUnread))]
+    private int otherUnreadCount = 0;
+
+    public bool HasFocusedUnread => FocusedUnreadCount > 0;
+    public bool HasOtherUnread => OtherUnreadCount > 0;
+
     public ObservableCollection<MailData> MailItems { get; private set; } = [];
 
     public ObservableCollection<ConversationGroup> ConversationGroups { get; private set; } = [];
@@ -90,6 +101,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     public void UpdateItems()
     {
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
+        FocusedUnreadCount = MailItems.Where(m => !m.IsRead && m.IsFocused).Count();
+        OtherUnreadCount = MailItems.Where(m => !m.IsRead && !m.IsFocused).Count();
         if (!IsLoadingContent)
             RunBackgroundSync();
     }
@@ -409,6 +422,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
 
         listDetailsMenuItem.IsRead = isRead;
+        FocusedUnreadCount = MailItems.Where(m => !m.IsRead && m.IsFocused).Count();
+        OtherUnreadCount = MailItems.Where(m => !m.IsRead && !m.IsFocused).Count();
 
         _ = _graphClient.Me
             .MailFolders["Inbox"]

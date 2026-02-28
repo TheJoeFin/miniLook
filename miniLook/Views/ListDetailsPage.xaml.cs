@@ -1,6 +1,7 @@
 ﻿using Microsoft.UI.Xaml.Controls;
 using miniLook.Models;
 using miniLook.ViewModels;
+using Windows.Foundation;
 
 namespace miniLook.Views;
 
@@ -25,6 +26,8 @@ public sealed partial class ListDetailsPage : Page
         PopOutButton.Visibility = isInPopOut
             ? Microsoft.UI.Xaml.Visibility.Collapsed
             : Microsoft.UI.Xaml.Visibility.Visible;
+
+        UpdateInfoBadgePositions();
     }
 
     private void PopOutButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -71,5 +74,27 @@ public sealed partial class ListDetailsPage : Page
     private void FocusedOtherSelectorBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         ViewModel.IsFocusedView = sender.SelectedItem == FocusedSelectorBarItem;
+    }
+
+    private void FocusedOtherSelectorBar_SizeChanged(object sender, Microsoft.UI.Xaml.SizeChangedEventArgs e)
+    {
+        UpdateInfoBadgePositions();
+    }
+
+    private void UpdateInfoBadgePositions()
+    {
+        try
+        {
+            var focusedTransform = FocusedSelectorBarItem.TransformToVisual(SelectorBarContainer);
+            var focusedBounds = focusedTransform.TransformBounds(
+                new Rect(0, 0, FocusedSelectorBarItem.ActualWidth, FocusedSelectorBarItem.ActualHeight));
+            FocusedInfoBadge.Margin = new Microsoft.UI.Xaml.Thickness(focusedBounds.Right - 10, 2, 0, 0);
+
+            var otherTransform = OtherSelectorBarItem.TransformToVisual(SelectorBarContainer);
+            var otherBounds = otherTransform.TransformBounds(
+                new Rect(0, 0, OtherSelectorBarItem.ActualWidth, OtherSelectorBarItem.ActualHeight));
+            OtherInfoBadge.Margin = new Microsoft.UI.Xaml.Thickness(otherBounds.Right - 10, 2, 0, 0);
+        }
+        catch { }
     }
 }
