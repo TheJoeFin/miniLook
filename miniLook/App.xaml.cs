@@ -57,6 +57,10 @@ public partial class App : Application
 
     public static WindowEx MainWindow { get; } = new MainWindow();
 
+    public static Views.PopOutWindow? PopOutWindow { get; set; }
+
+    public static Dictionary<string, Views.MailItemWindow> MailItemWindows { get; } = [];
+
     public static UIElement? AppTitlebar { get; set; }
 
     public App()

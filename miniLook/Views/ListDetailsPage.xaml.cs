@@ -15,6 +15,29 @@ public sealed partial class ListDetailsPage : Page
     {
         ViewModel = App.GetService<ListDetailsViewModel>();
         InitializeComponent();
+        Loaded += ListDetailsPage_Loaded;
+    }
+
+    private void ListDetailsPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        bool isInPopOut = App.PopOutWindow is not null
+            && XamlRoot == App.PopOutWindow.Content?.XamlRoot;
+        PopOutButton.Visibility = isInPopOut
+            ? Microsoft.UI.Xaml.Visibility.Collapsed
+            : Microsoft.UI.Xaml.Visibility.Visible;
+    }
+
+    private void PopOutButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (App.PopOutWindow is not null)
+        {
+            App.PopOutWindow.Activate();
+            return;
+        }
+
+        App.PopOutWindow = new PopOutWindow();
+        App.PopOutWindow.Closed += (s, args) => App.PopOutWindow = null;
+        App.PopOutWindow.Activate();
     }
 
     private void MailListView_ItemClick(object sender, ItemClickEventArgs e)

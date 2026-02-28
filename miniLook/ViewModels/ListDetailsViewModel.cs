@@ -4,7 +4,6 @@ using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
 using Microsoft.Graph.Me.MailFolders.Item.Messages.Delta;
 using Microsoft.Graph.Models;
-using Microsoft.UI.Windowing;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
@@ -36,9 +35,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     [ObservableProperty]
     private bool hasInternet = true;
-
-    [ObservableProperty]
-    private bool isOverlayMode = false;
 
     [ObservableProperty]
     private bool isFocusedView = true;
@@ -288,17 +284,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
-    private void ToggleOverlayMode()
-    {
-        IsOverlayMode = !IsOverlayMode;
-
-        if (IsOverlayMode)
-            App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.CompactOverlay);
-        else
-            App.MainWindow.SetWindowPresenter(AppWindowPresenterKind.Default);
-    }
-
-    [RelayCommand]
     private async Task ArchiveItem(object clickedItem)
     {
         if (clickedItem is not MailData listDetailsMenuItem)
@@ -324,6 +309,27 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         foreach (MailData message in group.Messages)
             MarkMessageIsReadAs(message, true);
+    }
+
+    [RelayCommand]
+    private void PopOutConversation(object clickedItem)
+    {
+        if (clickedItem is not ConversationGroup group)
+            return;
+
+        MailData mail = group.LatestMessage;
+        string mailId = mail.Id ?? string.Empty;
+
+        if (App.MailItemWindows.TryGetValue(mailId, out Views.MailItemWindow? existing))
+        {
+            existing.Activate();
+            return;
+        }
+
+        Views.MailItemWindow window = new(mail);
+        App.MailItemWindows[mailId] = window;
+        window.Closed += (s, e) => App.MailItemWindows.Remove(mailId);
+        window.Activate();
     }
 
     public async Task ArchiveThisMailItem(MailData listDetailsMenuItem)

@@ -26,9 +26,10 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\HtmlViewWindow.xaml" />
+    <None Remove="Views\MailItemWindow.xaml" />
+    <None Remove="Views\PopOutWindow.xaml" />
     <None Remove="Views\ShellPage.xaml" />
   </ItemGroup>
-
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
@@ -67,6 +68,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Page Update="Views\HtmlViewWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\MailItemWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\PopOutWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

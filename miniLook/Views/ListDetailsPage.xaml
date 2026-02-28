@@ -149,6 +149,15 @@
                                             <FontIcon FontSize="14" Glyph="&#xE8C3;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
+                                    <MenuFlyoutItem
+                                        x:Name="PopOutContextMenuItem"
+                                        Command="{Binding ElementName=MailListPage, Path=ViewModel.PopOutConversationCommand}"
+                                        CommandParameter="{x:Bind}"
+                                        Text="Pop out">
+                                        <MenuFlyoutItem.Icon>
+                                            <SymbolIcon Symbol="NewWindow" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                 </MenuFlyout>
                             </Grid.ContextFlyout>
                         </Grid>
@@ -208,7 +217,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="auto" />
             <RowDefinition Height="auto" />
-            <RowDefinition Height="auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -223,49 +231,31 @@
                 <ToggleButton
                     x:Name="CalendarToggleButton"
                     Width="48"
-                    RelativePanel.AlignLeftWithPanel="True"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
                     Style="{StaticResource DefaultToggleButtonStyle}"
                     ToolTipService.ToolTip="Show a couple of events in the next couple days">
                     <SymbolIcon Symbol="Calendar" />
                 </ToggleButton>
-
-                <TextBlock
-                    x:Name="UnreadMailNumber"
-                    Padding="10,0,6,0"
-                    VerticalAlignment="Center"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="CalendarToggleButton"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
-                <TextBlock
-                    x:Name="UnreadMailText"
-                    VerticalAlignment="Center"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="UnreadMailNumber"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="unread"
-                    ToolTipService.ToolTip="{x:Bind ViewModel.LastSync, Mode=OneWay, Converter={StaticResource stringFormatConverter}, ConverterParameter='{}Last Sync at {0:t}'}" />
-
+                <SelectorBar x:Name="FocusedOtherSelectorBar" SelectionChanged="FocusedOtherSelectorBar_SelectionChanged">
+                    <SelectorBarItem
+                        x:Name="FocusedSelectorBarItem"
+                        IsSelected="True"
+                        Text="Focused" />
+                    <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
+                </SelectorBar>
                 <FontIcon
                     x:Name="NoNetworkIcon"
                     Margin="6"
                     FontSize="16"
                     Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
                     Glyph="&#xF384;"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="UnreadMailText"
                     ToolTipService.ToolTip="No network"
                     Visibility="{x:Bind ViewModel.HasInternet, Mode=OneWay, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
-
                 <ProgressRing
                     Width="16"
                     Height="16"
                     Margin="6"
                     VerticalAlignment="Center"
-                    IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="NoNetworkIcon" />
+                    IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}" />
             </StackPanel>
 
             <CommandBar
@@ -273,13 +263,15 @@
                 Background="Transparent"
                 DefaultLabelPosition="Right">
                 <CommandBar.PrimaryCommands>
-                    <AppBarToggleButton
-                        x:Name="CompactOverlayToggleButton"
-                        Command="{x:Bind ViewModel.ToggleOverlayModeCommand}"
-                        Icon="BackToWindow"
-                        IsChecked="{x:Bind ViewModel.IsOverlayMode, Mode=OneWay}"
+                    <AppBarButton
+                        x:Name="PopOutButton"
+                        Click="PopOutButton_Click"
                         LabelPosition="Collapsed"
-                        ToolTipService.ToolTip="Enter Compact Overlay Mode" />
+                        ToolTipService.ToolTip="Pop out to separate window">
+                        <AppBarButton.Icon>
+                            <SymbolIcon Symbol="NewWindow" />
+                        </AppBarButton.Icon>
+                    </AppBarButton>
                     <AppBarButton
                         x:Name="ComposeNewMailButton"
                         Command="{x:Bind ViewModel.GoToSendMailCommand}"
@@ -322,20 +314,8 @@
                 </CommandBar.SecondaryCommands>
             </CommandBar>
         </Grid>
-        <SelectorBar
-            x:Name="FocusedOtherSelectorBar"
-            Grid.Row="1"
-            Margin="4,0"
-            SelectionChanged="FocusedOtherSelectorBar_SelectionChanged">
-            <SelectorBarItem
-                x:Name="FocusedSelectorBarItem"
-                IsSelected="True"
-                Text="Focused" />
-            <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
-        </SelectorBar>
-
         <Grid
-            Grid.Row="2"
+            Grid.Row="1"
             Padding="12"
             Background="{ThemeResource ControlFillColorSecondary}"
             Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
@@ -382,7 +362,7 @@
         </Grid>
         <ListView
             x:Name="MailListView"
-            Grid.Row="3"
+            Grid.Row="2"
             Background="Transparent"
             BorderBrush="Transparent"
             IsItemClickEnabled="True"
@@ -393,7 +373,7 @@
 
         <Grid
             x:Name="DebugPane"
-            Grid.Row="3"
+            Grid.Row="2"
             MinWidth="200"
             MinHeight="150"
             Margin="10"
