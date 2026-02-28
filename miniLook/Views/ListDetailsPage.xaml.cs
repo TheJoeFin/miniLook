@@ -44,4 +44,9 @@ public sealed partial class ListDetailsPage : Page
         foreach (MailData message in group.Messages)
             ViewModel.MarkMessageIsReadAs(message, true);
     }
+
+    private void FocusedOtherSelectorBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        ViewModel.IsFocusedView = sender.SelectedItem == FocusedSelectorBarItem;
+    }
 }

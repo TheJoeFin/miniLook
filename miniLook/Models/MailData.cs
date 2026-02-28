@@ -25,6 +25,8 @@ public partial class MailData: ObservableRecipient
 
     public string WebLink { get; set; } = string.Empty;
 
+    public bool IsFocused { get; set; } = true;
+
     public bool IsEvent { get; set; } = false;
 
     public int AttachmentsCount { get; set; } = 0;
@@ -52,6 +54,7 @@ public partial class MailData: ObservableRecipient
         ReceivedDateTime = message.ReceivedDateTime ?? DateTimeOffset.MinValue;
         ConversationId = message.ConversationId ?? string.Empty;
         ConversationIndex = message.ConversationIndex;
+        IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
 
         Body = message.BodyPreview ?? string.Empty;
 

@@ -62,8 +62,8 @@ public partial class SettingsViewModel : ObservableRecipient
     [RelayCommand]
     private async Task ClearCachedData()
     {
-        await MailCacheService.ClearMailCacheAsync();
-        await MailCacheService.SaveDeltaLink(null);
+        ListDetailsViewModel listDetailsViewModel = App.GetService<ListDetailsViewModel>();
+        await listDetailsViewModel.ClearOutContents();
         CanClearCache = false;
     }
 

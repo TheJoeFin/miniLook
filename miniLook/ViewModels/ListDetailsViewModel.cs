@@ -40,9 +40,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [ObservableProperty]
     private bool isOverlayMode = false;
 
+    [ObservableProperty]
+    private bool isFocusedView = true;
+
     public ObservableCollection<MailData> MailItems { get; private set; } = [];
 
     public ObservableCollection<ConversationGroup> ConversationGroups { get; private set; } = [];
+
+    public ObservableCollection<ConversationGroup> FilteredConversationGroups { get; private set; } = [];
 
     public ObservableCollection<Event> Events { get; private set; } = [];
 
@@ -74,6 +79,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     {
         if (value.Length > 10000)
             DebugText = value.Substring(0, 5000);
+    }
+
+    partial void OnIsFocusedViewChanged(bool value)
+    {
+        RebuildFilteredConversationGroups();
     }
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -135,6 +145,36 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                 ConversationGroups.Insert(targetIndex, new ConversationGroup(conversationId, messages));
             }
         }
+
+        RebuildFilteredConversationGroups();
+    }
+
+    public void RebuildFilteredConversationGroups()
+    {
+        List<ConversationGroup> filtered = ConversationGroups
+            .Where(g => g.IsFocused == IsFocusedView)
+            .ToList();
+
+        for (int i = FilteredConversationGroups.Count - 1; i >= 0; i--)
+        {
+            if (!filtered.Contains(FilteredConversationGroups[i]))
+                FilteredConversationGroups.RemoveAt(i);
+        }
+
+        for (int i = 0; i < filtered.Count; i++)
+        {
+            int currentIndex = FilteredConversationGroups.IndexOf(filtered[i]);
+            if (currentIndex < 0)
+                FilteredConversationGroups.Insert(i, filtered[i]);
+            else if (currentIndex != i)
+                FilteredConversationGroups.Move(currentIndex, i);
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleFocusedView()
+    {
+        IsFocusedView = !IsFocusedView;
     }
 
     public async void RunBackgroundSync()
@@ -208,9 +248,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             RunBackgroundSync();
     }
 
-    private async Task ClearOutContents()
+    public async Task ClearOutContents()
     {
         MailItems.Clear();
+        ConversationGroups.Clear();
+        FilteredConversationGroups.Clear();
         Events.Clear();
         App.SetUpcomingEvents([]);
 
@@ -472,127 +514,216 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         isSyncingMail = true;
 
-        DeltaGetResponse? currentPage;
+        try
+        {
+            DeltaGetResponse? currentPage;
 
-        if (deltaLink is not null)
-        {
-            currentPage = await new DeltaRequestBuilder(deltaLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
-        }
-        else
-        {
-            try
+            if (deltaLink is not null)
             {
+                Debug.WriteLine($"[Sync] Using existing delta link: {deltaLink[..Math.Min(80, deltaLink.Length)]}...");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Using existing delta link\n");
+                try
+                {
+                    currentPage = await new DeltaRequestBuilder(deltaLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Sync] Delta link request failed, resetting to full sync: {ex.Message}");
+                    DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Delta link failed, doing full sync\n");
+                    deltaLink = null;
+                    MailCacheService.DeltaLink = null;
+                    currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync();
+                }
+            }
+            else
+            {
+                Debug.WriteLine("[Sync] No delta link, starting full delta sync.");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: No delta link, starting full sync\n");
                 currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync();
             }
-            catch (Exception)
-            {
-                isSyncingMail = false;
-                return;
-            }
-        }
 
-        do
-        {
-            if (currentPage?.Value is null)
-                break;
+            int pageNumber = 0;
 
-            foreach (Message message in currentPage.Value)
+            do
             {
-                if (isSigningOut || !HasInternet)
+                pageNumber++;
+
+                if (currentPage?.Value is null)
                 {
-                    isSyncingMail = false;
-                    return;
+                    Debug.WriteLine($"[Sync] Page {pageNumber}: Value is null, stopping pagination.");
+                    DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Page {pageNumber} Value is null, stopping\n");
+                    break;
                 }
 
-                MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
-                MailData newMail = new(message);
-                if (message.AdditionalData is not null
-                    && message.AdditionalData.TryGetValue("@removed", out object? removed))
-                {
-                    if (matchingMessage is not null)
-                        MailItems.Remove(matchingMessage);
+                DateTimeOffset? oldest = currentPage.Value
+                    .Where(m => m.ReceivedDateTime is not null)
+                    .Min(m => m.ReceivedDateTime);
+                DateTimeOffset? newest = currentPage.Value
+                    .Where(m => m.ReceivedDateTime is not null)
+                    .Max(m => m.ReceivedDateTime);
 
-                    continue;
-                }
+                Debug.WriteLine($"[Sync] Page {pageNumber}: {currentPage.Value.Count} messages, oldest={oldest}, newest={newest}, hasNextLink={currentPage.OdataNextLink is not null}, hasDeltaLink={currentPage.OdataDeltaLink is not null}");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Page {pageNumber}: {currentPage.Value.Count} msgs, oldest={oldest:g}, newest={newest:g}\n");
 
-                if (message.AdditionalData is null && message.IsRead is not null)
+                int addedCount = 0;
+                int updatedCount = 0;
+                int removedCount = 0;
+                int skippedSparseCount = 0;
+
+                foreach (Message message in currentPage.Value)
                 {
-                    if (matchingMessage is not null)
+                    if (isSigningOut || !HasInternet)
+                        return;
+
+                    MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
+
+                    if (message.AdditionalData is not null
+                        && message.AdditionalData.TryGetValue("@removed", out object? removed))
                     {
-                        int index = MailItems.IndexOf(matchingMessage);
-                        matchingMessage.IsRead = (bool)message.IsRead;
+                        if (matchingMessage is not null)
+                        {
+                            MailItems.Remove(matchingMessage);
+                            removedCount++;
+                        }
+
+                        continue;
                     }
 
-                    continue;
-                }
-
-                if (message.OdataType == "#microsoft.graph.eventMessageRequest")
-                {
-                    newMail.IsEvent = true;
-                }
-
-                if (message.HasAttachments is true)
-                {
-                    AttachmentCollectionResponse? result = await _graphClient
-                        .Me.Messages[message.Id]
-                        .Attachments.GetAsync();
-
-                    if (result?.Value is not null)
+                    // Sparse delta update: only changed properties, not a full message.
+                    // A full message always has ReceivedDateTime; sparse updates do not.
+                    if (message.ReceivedDateTime is null)
                     {
-                        newMail.AttachmentsCount = result.Value.Count;
-
-                        foreach (Attachment attachment in result.Value)
+                        if (matchingMessage is not null)
                         {
-                            if (attachment is FileAttachment fileAttachment)
-                                Debug.WriteLine("File attachment found: " + fileAttachment.Name);
+                            if (message.IsRead is not null)
+                                matchingMessage.IsRead = (bool)message.IsRead;
+                            if (message.InferenceClassification is not null)
+                                matchingMessage.IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
+                            updatedCount++;
+                        }
+
+                        skippedSparseCount++;
+                        continue;
+                    }
+
+                    MailData newMail = new(message);
+
+                    if (message.OdataType == "#microsoft.graph.eventMessageRequest")
+                    {
+                        newMail.IsEvent = true;
+                    }
+
+                    if (message.HasAttachments is true)
+                    {
+                        try
+                        {
+                            AttachmentCollectionResponse? result = await _graphClient
+                                .Me.Messages[message.Id]
+                                .Attachments.GetAsync();
+
+                            if (result?.Value is not null)
+                            {
+                                newMail.AttachmentsCount = result.Value.Count;
+
+                                foreach (Attachment attachment in result.Value)
+                                {
+                                    if (attachment is FileAttachment fileAttachment)
+                                        Debug.WriteLine("File attachment found: " + fileAttachment.Name);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[Sync] Failed to fetch attachments for message {message.Id}: {ex.Message}");
                         }
                     }
-                }
 
-                if (MailItems.Count == 0)
-                {
-                    MailItems.Add(newMail);
-                    continue;
-                }
-
-                if (matchingMessage is not null)
-                    continue;
-
-                bool insertedMail = false;
-                for (int i = 0; i < MailItems.Count; i++)
-                {
-                    if (MailItems[i].ReceivedDateTime < message.ReceivedDateTime)
+                    if (MailItems.Count == 0)
                     {
-                        MailItems.Insert(i, newMail);
-                        insertedMail = true;
+                        MailItems.Add(newMail);
+                        addedCount++;
+                        continue;
+                    }
+
+                    if (matchingMessage is not null)
+                    {
+                        if (message.InferenceClassification is not null)
+                            matchingMessage.IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
+                        updatedCount++;
+                        continue;
+                    }
+
+                    bool insertedMail = false;
+                    for (int i = 0; i < MailItems.Count; i++)
+                    {
+                        if (MailItems[i].ReceivedDateTime < message.ReceivedDateTime)
+                        {
+                            MailItems.Insert(i, newMail);
+                            insertedMail = true;
+                            break;
+                        }
+                    }
+
+                    if (!insertedMail)
+                        MailItems.Add(newMail);
+
+                    addedCount++;
+                }
+
+                Debug.WriteLine($"[Sync] Page {pageNumber} processed: added={addedCount}, updated={updatedCount}, removed={removedCount}, sparseSkipped={skippedSparseCount}");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Page {pageNumber} done: +{addedCount} ~{updatedCount} -{removedCount} sparse={skippedSparseCount}\n");
+
+                if (currentPage.OdataNextLink is not null)
+                {
+                    Debug.WriteLine($"[Sync] Fetching next page {pageNumber + 1}...");
+                    try
+                    {
+                        currentPage = await new DeltaRequestBuilder(currentPage.OdataNextLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[Sync] Failed to fetch page {pageNumber + 1}: {ex.Message}");
+                        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Failed to fetch page {pageNumber + 1}: {ex.Message}\n");
                         break;
                     }
                 }
-
-                if (!insertedMail)
-                    MailItems.Add(newMail);
+                else
+                {
+                    Debug.WriteLine($"[Sync] No more pages after page {pageNumber}. HasDeltaLink={currentPage.OdataDeltaLink is not null}");
+                    DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: No more pages after page {pageNumber}\n");
+                    break;
+                }
             }
+            while (currentPage is not null);
 
-            if (currentPage.OdataNextLink is not null)
-                currentPage = await new DeltaRequestBuilder(currentPage.OdataNextLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
+            Debug.WriteLine($"[Sync] Pagination complete after {pageNumber} pages. Total MailItems={MailItems.Count}. HasDeltaLink={currentPage?.OdataDeltaLink is not null}");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Done {pageNumber} pages, {MailItems.Count} total items, deltaLink={currentPage?.OdataDeltaLink is not null}\n");
+
+            if (currentPage?.OdataDeltaLink is not null)
+            {
+                deltaLink = currentPage.OdataDeltaLink;
+                await MailCacheService.SaveDeltaLink(deltaLink);
+                await MailCacheService.SaveEmailsAsync(MailItems);
+            }
             else
-                break;
+            {
+                Debug.WriteLine("[Sync] WARNING: No delta link received — next sync will do a full re-fetch.");
+                DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: WARNING no delta link received\n");
+            }
         }
-        while (currentPage is not null);
-
-        if (currentPage?.OdataDeltaLink is not null)
+        catch (Exception ex)
         {
-            deltaLink = currentPage.OdataDeltaLink;
-            await MailCacheService.SaveDeltaLink(deltaLink);
-            await MailCacheService.SaveEmailsAsync(MailItems);
+            Debug.WriteLine($"[Sync] Mail sync failed: {ex.Message}");
         }
-
-        isSyncingMail = false;
-        LastSync = DateTime.Now;
-        NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
-        App.SetTaskbarBadgeToNumber(NumberUnread);
-        RebuildConversationGroups();
-        DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
+        finally
+        {
+            isSyncingMail = false;
+            LastSync = DateTime.Now;
+            NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
+            App.SetTaskbarBadgeToNumber(NumberUnread);
+            RebuildConversationGroups();
+            DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
+        }
     }
 
     private async Task GetEvents()

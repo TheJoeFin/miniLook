@@ -28,6 +28,8 @@ public partial class ConversationGroup : ObservableRecipient
 
     public bool HasMultipleMessages => Messages.Count > 1;
 
+    public bool IsFocused => LatestMessage.IsFocused;
+
     public ConversationGroup(string conversationId, IEnumerable<MailData> messages)
     {
         ConversationId = conversationId;
@@ -73,5 +75,6 @@ public partial class ConversationGroup : ObservableRecipient
         OnPropertyChanged(nameof(IsEvent));
         OnPropertyChanged(nameof(MessageCount));
         OnPropertyChanged(nameof(HasMultipleMessages));
+        OnPropertyChanged(nameof(IsFocused));
     }
 }

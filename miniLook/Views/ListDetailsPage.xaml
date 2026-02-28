@@ -208,6 +208,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="auto" />
             <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -321,8 +322,20 @@
                 </CommandBar.SecondaryCommands>
             </CommandBar>
         </Grid>
-        <Grid
+        <SelectorBar
+            x:Name="FocusedOtherSelectorBar"
             Grid.Row="1"
+            Margin="4,0"
+            SelectionChanged="FocusedOtherSelectorBar_SelectionChanged">
+            <SelectorBarItem
+                x:Name="FocusedSelectorBarItem"
+                IsSelected="True"
+                Text="Focused" />
+            <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
+        </SelectorBar>
+
+        <Grid
+            Grid.Row="2"
             Padding="12"
             Background="{ThemeResource ControlFillColorSecondary}"
             Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
@@ -369,18 +382,18 @@
         </Grid>
         <ListView
             x:Name="MailListView"
-            Grid.Row="2"
+            Grid.Row="3"
             Background="Transparent"
             BorderBrush="Transparent"
             IsItemClickEnabled="True"
             ItemClick="MailListView_ItemClick"
             ItemTemplate="{StaticResource ItemTemplate}"
-            ItemsSource="{x:Bind ViewModel.ConversationGroups, Mode=OneWay}"
+            ItemsSource="{x:Bind ViewModel.FilteredConversationGroups, Mode=OneWay}"
             SelectionMode="None" />
 
         <Grid
             x:Name="DebugPane"
-            Grid.Row="2"
+            Grid.Row="3"
             MinWidth="200"
             MinHeight="150"
             Margin="10"
