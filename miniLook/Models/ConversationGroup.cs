@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 
 namespace miniLook.Models;
 
-public partial class ConversationGroup : ObservableRecipient
+public partial class ConversationGroup : ObservableObject
 {
     public string ConversationId { get; set; } = string.Empty;
 

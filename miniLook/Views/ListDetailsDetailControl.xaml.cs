@@ -14,6 +14,8 @@ public sealed partial class ListDetailsDetailControl : UserControl
 {
     private ListDetailsViewModel ViewModel { get; } = App.GetService<ListDetailsViewModel>();
 
+    private string? _currentHtmlBody;
+
     public MailData? ListDetailsMenuItem
     {
         get => GetValue(ListDetailsMenuItemProperty) as MailData;
@@ -41,9 +43,9 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
         if (WebViewPane.Visibility == Visibility.Visible
             && ListDetailsMenuItem is not null
-            && !string.IsNullOrEmpty(ListDetailsMenuItem.HtmlBody))
+            && !string.IsNullOrEmpty(_currentHtmlBody))
         {
-            BodyWebView.NavigateToString(ApplyThemeToHtml(ListDetailsMenuItem.HtmlBody));
+            BodyWebView.NavigateToString(ApplyThemeToHtml(_currentHtmlBody));
         }
     }
 
@@ -51,6 +53,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
     {
         if (d is ListDetailsDetailControl control)
         {
+            control._currentHtmlBody = null;
             control.ForegroundElement.ChangeView(0, 0, 1);
             control.ResetToggles();
             await control.TryAutoRenderHtmlAsync();
@@ -73,7 +76,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private async Task TryAutoRenderHtmlAsync()
     {
-        if (ListDetailsMenuItem is null || string.IsNullOrEmpty(ListDetailsMenuItem.HtmlBody))
+        if (ListDetailsMenuItem is null || !ListDetailsMenuItem.HasHtmlBody)
             return;
 
         ILocalSettingsService localSettingsService = App.GetService<ILocalSettingsService>();
@@ -82,12 +85,16 @@ public sealed partial class ListDetailsDetailControl : UserControl
         if (!alwaysRenderHtml)
             return;
 
+        _currentHtmlBody ??= await ViewModel.GetHtmlBodyAsync(ListDetailsMenuItem.Id);
+        if (string.IsNullOrEmpty(_currentHtmlBody))
+            return;
+
         BodyScrollViewer.Visibility = Visibility.Collapsed;
         WebViewPane.Visibility = Visibility.Visible;
         ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
 
         await BodyWebView.EnsureCoreWebView2Async();
-        BodyWebView.NavigateToString(ApplyThemeToHtml(ListDetailsMenuItem.HtmlBody));
+        BodyWebView.NavigateToString(ApplyThemeToHtml(_currentHtmlBody));
     }
 
     private void SenderButton_Click(object sender, RoutedEventArgs e)
@@ -128,7 +135,11 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private async void BrowserLink_Click(object sender, RoutedEventArgs e)
     {
-        if (ListDetailsMenuItem is null || string.IsNullOrEmpty(ListDetailsMenuItem.HtmlBody))
+        if (ListDetailsMenuItem is null || !ListDetailsMenuItem.HasHtmlBody)
+            return;
+
+        _currentHtmlBody ??= await ViewModel.GetHtmlBodyAsync(ListDetailsMenuItem.Id);
+        if (string.IsNullOrEmpty(_currentHtmlBody))
             return;
 
         BodyScrollViewer.Visibility = Visibility.Collapsed;
@@ -136,7 +147,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
         ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
 
         await BodyWebView.EnsureCoreWebView2Async();
-        BodyWebView.NavigateToString(ApplyThemeToHtml(ListDetailsMenuItem.HtmlBody));
+        BodyWebView.NavigateToString(ApplyThemeToHtml(_currentHtmlBody));
     }
 
     private void BackToTextButton_Click(object sender, RoutedEventArgs e)

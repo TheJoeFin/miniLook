@@ -34,8 +34,6 @@
                 Style="{StaticResource CaptionTextBlockStyle}"
                 TextTrimming="CharacterEllipsis" />
         </StackPanel>
-        <local:ListDetailsDetailControl
-            x:Name="DetailControl"
-            Grid.Row="1" />
+        <local:ListDetailsDetailControl x:Name="DetailControl" Grid.Row="1" />
     </Grid>
 </windowex:WindowEx>

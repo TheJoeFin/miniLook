@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace miniLook.Models;
 
-public partial class MailData : ObservableRecipient, IJsonOnDeserialized
+public partial class MailData : ObservableObject, IJsonOnDeserialized
 {
     public string Id { get; set; } = string.Empty;
 
@@ -13,8 +13,6 @@ public partial class MailData : ObservableRecipient, IJsonOnDeserialized
     public bool isRead = false;
 
     public string ConversationId { get; set; } = string.Empty;
-    
-    public byte[]? ConversationIndex { get; private set; }
 
     public string Sender { get; set; } = string.Empty;
 
@@ -24,15 +22,11 @@ public partial class MailData : ObservableRecipient, IJsonOnDeserialized
 
     public string SenderDisplayName => string.IsNullOrEmpty(SenderName) ? SenderAddress : SenderName;
 
-    public string ToRecipientsShort { get; set; } = string.Empty;
-
     public string ToRecipientsFull { get; set; } = string.Empty;
-
-    public string CcRecipientsShort { get; set; } = string.Empty;
 
     public string CcRecipientsFull { get; set; } = string.Empty;
 
-    public bool HasToRecipients => !string.IsNullOrEmpty(ToRecipientsShort);
+    public bool HasToRecipients { get; set; } = false;
 
     public bool HasCcRecipients { get; set; } = false;
 
@@ -40,9 +34,7 @@ public partial class MailData : ObservableRecipient, IJsonOnDeserialized
 
     public string Body { get; set; } = string.Empty;
 
-    public string HtmlBody { get; set; } = string.Empty;
-
-    public bool HasHtmlBody => !string.IsNullOrEmpty(HtmlBody);
+    public bool HasHtmlBody { get; set; } = false;
 
     public string WebLink { get; set; } = string.Empty;
 
@@ -66,9 +58,6 @@ public partial class MailData : ObservableRecipient, IJsonOnDeserialized
         ? ReceivedDateTime.ToLocalTime().ToString("ddd, MMM d, yyyy h:mm tt")
         : string.Empty;
 
-    [JsonIgnore]
-    public Message? GraphMessage { get; set; }
-
     public MailData()
     {
         
@@ -81,21 +70,19 @@ public partial class MailData : ObservableRecipient, IJsonOnDeserialized
         SenderName = message.Sender?.EmailAddress?.Name ?? string.Empty;
         SenderAddress = message.Sender?.EmailAddress?.Address ?? string.Empty;
         Sender = string.IsNullOrEmpty(SenderName) ? SenderAddress : $"{SenderName} ({SenderAddress})";
-        (ToRecipientsShort, ToRecipientsFull) = BuildRecipientDisplay(message.ToRecipients);
-        (CcRecipientsShort, CcRecipientsFull) = BuildRecipientDisplay(message.CcRecipients);
-        HasCcRecipients = !string.IsNullOrEmpty(CcRecipientsShort);
+        (_, ToRecipientsFull) = BuildRecipientDisplay(message.ToRecipients);
+        HasToRecipients = message.ToRecipients?.Count > 0;
+        (_, CcRecipientsFull) = BuildRecipientDisplay(message.CcRecipients);
+        HasCcRecipients = message.CcRecipients?.Count > 0;
         Subject = message.Subject ?? $"No subject";
-        GraphMessage = message;
         WebLink = message.WebLink ?? string.Empty;
         ReceivedDateTime = message.ReceivedDateTime ?? DateTimeOffset.MinValue;
         ConversationId = message.ConversationId ?? string.Empty;
-        ConversationIndex = message.ConversationIndex;
         IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
 
         Body = message.BodyPreview ?? string.Empty;
 
-        if (message.Body is not null && message.Body.ContentType == BodyType.Html)
-            HtmlBody = message.Body.Content ?? string.Empty;
+        HasHtmlBody = !string.IsNullOrEmpty(message.BodyPreview);
     }
 
     public void OnDeserialized()

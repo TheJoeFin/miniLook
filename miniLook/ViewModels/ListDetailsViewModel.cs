@@ -507,7 +507,37 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         return null;
     }
 
-    public void RenderHtmlBody(MailData mail)
+    public async Task<string> GetHtmlBodyAsync(string messageId)
+    {
+        if (_graphClient is null)
+            return string.Empty;
+
+        try
+        {
+            Message? message = await _graphClient.Me.Messages[messageId].GetAsync(config =>
+            {
+                config.QueryParameters.Select = ["body"];
+            });
+
+            if (message?.Body is null)
+                return string.Empty;
+
+            if (message.Body.ContentType == BodyType.Html)
+                return message.Body.Content ?? string.Empty;
+
+            // Plain-text email: wrap in <pre> so it displays correctly in WebView
+            string escaped = System.Net.WebUtility.HtmlEncode(message.Body.Content ?? string.Empty);
+            return $"<html><body><pre style='white-space:pre-wrap;font-family:sans-serif;'>{escaped}</pre></body></html>";
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[HtmlBody] Failed to fetch HTML body for {messageId}: {ex.Message}");
+        }
+
+        return string.Empty;
+    }
+
+    public async void RenderHtmlBody(MailData mail)
     {
         string mailId = mail.Id ?? string.Empty;
 
@@ -517,12 +547,16 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
         }
 
+        string htmlBody = await GetHtmlBodyAsync(mailId);
+        if (string.IsNullOrEmpty(htmlBody))
+            return;
+
         Views.HtmlViewWindow window = new();
         window.Title = mail.Subject ?? "miniLook";
         App.HtmlViewWindows[mailId] = window;
         window.Closed += (s, e) => App.HtmlViewWindows.Remove(mailId);
         window.Activate();
-        _ = window.SetContent(mail.HtmlBody);
+        _ = window.SetContent(htmlBody);
     }
 
     private async Task TryToLoadMail(MailData? selectMailData = null)
@@ -606,14 +640,20 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                     DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Delta link failed, doing full sync\n");
                     deltaLink = null;
                     MailCacheService.DeltaLink = null;
-                    currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync();
+                    currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync(config =>
+                    {
+                        config.QueryParameters.Select = ["id", "isRead", "sender", "toRecipients", "ccRecipients", "subject", "bodyPreview", "webLink", "receivedDateTime", "conversationId", "inferenceClassification", "hasAttachments"];
+                    });
                 }
             }
             else
             {
                 Debug.WriteLine("[Sync] No delta link, starting full delta sync.");
                 DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: No delta link, starting full sync\n");
-                currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync();
+                currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync(config =>
+                {
+                    config.QueryParameters.Select = ["id", "isRead", "sender", "toRecipients", "ccRecipients", "subject", "bodyPreview", "webLink", "receivedDateTime", "conversationId", "inferenceClassification", "hasAttachments"];
+                });
             }
 
             int pageNumber = 0;
@@ -708,7 +748,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
                                             Id = fileAttachment.Id ?? string.Empty,
                                             Name = fileAttachment.Name ?? string.Empty,
                                             ContentType = fileAttachment.ContentType ?? string.Empty,
-                                            ContentBytes = fileAttachment.ContentBytes,
                                         });
                                         Debug.WriteLine("File attachment found: " + fileAttachment.Name);
                                     }

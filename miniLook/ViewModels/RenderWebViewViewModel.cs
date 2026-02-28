@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Microsoft.Graph.Models;
 using Microsoft.Web.WebView2.Core;
 
 using miniLook.Contracts.Services;
@@ -29,12 +30,14 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
 
     public IWebViewService WebViewService { get; }
     public INavigationService NavigationService { get; }
+    private IGraphService GraphService { get; }
 
-    public RenderWebViewViewModel(IWebViewService webViewService, INavigationService navigationService)
+    public RenderWebViewViewModel(IWebViewService webViewService, INavigationService navigationService, IGraphService graphService)
     {
         WebViewService = webViewService;
         WebViewService.StayInOneWindow = true;
         NavigationService = navigationService;
+        GraphService = graphService;
     }
 
     [RelayCommand]
@@ -80,12 +83,26 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
         return WebViewService.CanGoBack;
     }
 
-    public void OnNavigatedTo(object parameter)
+    public async void OnNavigatedTo(object parameter)
     {
         if (parameter is MailData mailData)
         {
             passedMailData = mailData;
-            WebViewService.GoToString(mailData.HtmlBody);
+
+            if (GraphService.Client is not null)
+            {
+                try
+                {
+                    Message? message = await GraphService.Client.Me.Messages[mailData.Id].GetAsync(config =>
+                    {
+                        config.QueryParameters.Select = ["body"];
+                    });
+
+                    if (message?.Body?.ContentType == BodyType.Html && !string.IsNullOrEmpty(message.Body.Content))
+                        WebViewService.GoToString(message.Body.Content);
+                }
+                catch { }
+            }
         }
 
         WebViewService.NavigationCompleted += OnNavigationCompleted;
