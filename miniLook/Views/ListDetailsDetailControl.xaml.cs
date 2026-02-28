@@ -4,6 +4,7 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
+using miniLook.Contracts.Services;
 using miniLook.Models;
 using miniLook.ViewModels;
 
@@ -24,14 +25,35 @@ public sealed partial class ListDetailsDetailControl : UserControl
     public ListDetailsDetailControl()
     {
         InitializeComponent();
+        this.ActualThemeChanged += OnActualThemeChanged;
     }
 
-    private static void OnListDetailsMenuItemPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+    {
+        if (BodyWebView.CoreWebView2 is null)
+            return;
+
+        bool isDark = this.ActualTheme == ElementTheme.Dark;
+        BodyWebView.DefaultBackgroundColor = isDark ? Colors.Black : Colors.White;
+        BodyWebView.CoreWebView2.Profile.PreferredColorScheme = isDark
+            ? CoreWebView2PreferredColorScheme.Dark
+            : CoreWebView2PreferredColorScheme.Light;
+
+        if (WebViewPane.Visibility == Visibility.Visible
+            && ListDetailsMenuItem is not null
+            && !string.IsNullOrEmpty(ListDetailsMenuItem.HtmlBody))
+        {
+            BodyWebView.NavigateToString(ApplyThemeToHtml(ListDetailsMenuItem.HtmlBody));
+        }
+    }
+
+    private static async void OnListDetailsMenuItemPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ListDetailsDetailControl control)
         {
             control.ForegroundElement.ChangeView(0, 0, 1);
             control.ResetToggles();
+            await control.TryAutoRenderHtmlAsync();
         }
     }
 
@@ -47,6 +69,25 @@ public sealed partial class ListDetailsDetailControl : UserControl
         ExactDateText.Visibility = Visibility.Collapsed;
         WebViewPane.Visibility = Visibility.Collapsed;
         BodyScrollViewer.Visibility = Visibility.Visible;
+    }
+
+    private async Task TryAutoRenderHtmlAsync()
+    {
+        if (ListDetailsMenuItem is null || string.IsNullOrEmpty(ListDetailsMenuItem.HtmlBody))
+            return;
+
+        ILocalSettingsService localSettingsService = App.GetService<ILocalSettingsService>();
+        bool alwaysRenderHtml = await localSettingsService.ReadSettingAsync<bool>(ViewModels.SettingsViewModel.AlwaysRenderHtmlSettingsKey);
+
+        if (!alwaysRenderHtml)
+            return;
+
+        BodyScrollViewer.Visibility = Visibility.Collapsed;
+        WebViewPane.Visibility = Visibility.Visible;
+        ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
+
+        await BodyWebView.EnsureCoreWebView2Async();
+        BodyWebView.NavigateToString(ApplyThemeToHtml(ListDetailsMenuItem.HtmlBody));
     }
 
     private void SenderButton_Click(object sender, RoutedEventArgs e)
@@ -95,7 +136,7 @@ public sealed partial class ListDetailsDetailControl : UserControl
         ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
 
         await BodyWebView.EnsureCoreWebView2Async();
-        BodyWebView.NavigateToString(ListDetailsMenuItem.HtmlBody);
+        BodyWebView.NavigateToString(ApplyThemeToHtml(ListDetailsMenuItem.HtmlBody));
     }
 
     private void BackToTextButton_Click(object sender, RoutedEventArgs e)
@@ -106,8 +147,8 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
     private void BodyWebView_CoreWebView2Initialized(WebView2 sender, CoreWebView2InitializedEventArgs args)
     {
-        bool isDark = Microsoft.UI.Xaml.Application.Current.RequestedTheme == ApplicationTheme.Dark;
-        sender.DefaultBackgroundColor = isDark ? Colors.DimGray : Colors.LightGray;
+        bool isDark = this.ActualTheme == ElementTheme.Dark;
+        sender.DefaultBackgroundColor = isDark ? Colors.Black : Colors.White;
         sender.CoreWebView2.Profile.PreferredColorScheme = isDark
             ? CoreWebView2PreferredColorScheme.Dark
             : CoreWebView2PreferredColorScheme.Light;
@@ -116,6 +157,25 @@ public sealed partial class ListDetailsDetailControl : UserControl
             ev.Handled = true;
             _ = Windows.System.Launcher.LaunchUriAsync(new Uri(ev.Uri));
         };
+    }
+
+    private string ApplyThemeToHtml(string html)
+    {
+        if (this.ActualTheme != ElementTheme.Dark)
+            return html;
+
+        const string darkCss =
+            "<style>" +
+            ":root{color-scheme:dark;}" +
+            "html,body{background-color:#1c1c1c!important;color:#d4d4d4!important;}" +
+            "a:link,a:visited{color:#75b3f7!important;}" +
+            "</style>";
+
+        int headCloseIdx = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
+        if (headCloseIdx >= 0)
+            return html.Insert(headCloseIdx, darkCss);
+
+        return darkCss + html;
     }
 
     private void TryUpdateParent()

@@ -69,6 +69,11 @@
                 </StackPanel>
             </StackPanel>
 
+            <ToggleSwitch
+                x:Uid="Settings_AlwaysRenderHtml"
+                Margin="{StaticResource XSmallTopMargin}"
+                IsOn="{x:Bind ViewModel.AlwaysRenderHtml, Mode=TwoWay}" />
+
             <HyperlinkButton
                 x:Uid="Settings_ClearMailCache"
                 Command="{x:Bind ViewModel.ClearCachedDataCommand}"

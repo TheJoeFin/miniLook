@@ -192,6 +192,9 @@ If you have any feedback please reach out to joe@JoeFinApps.com
   <data name="Settings_ClearMailCache.Content" xml:space="preserve">
     <value>Clear Mail Cache</value>
   </data>
+  <data name="Settings_AlwaysRenderHtml.Header" xml:space="preserve">
+    <value>Always render HTML emails</value>
+  </data>
   <data name="WebView_Loading.Text" xml:space="preserve">
     <value>Loading...</value>
   </data>
