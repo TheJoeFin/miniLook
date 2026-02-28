@@ -41,7 +41,7 @@ public sealed partial class ListDetailsPage : Page
         if (args.SwipeControl.DataContext is not ConversationGroup group)
             return;
 
-        foreach (var message in group.Messages)
+        foreach (MailData message in group.Messages)
             ViewModel.MarkMessageIsReadAs(message, true);
     }
 }

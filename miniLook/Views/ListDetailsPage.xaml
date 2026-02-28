@@ -88,24 +88,20 @@
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Height="16">
-                                    <SymbolIcon
-                                        Symbol="Calendar"
-                                        Visibility="{x:Bind IsEvent}" />
+                                    <SymbolIcon Symbol="Calendar" Visibility="{x:Bind IsEvent}" />
                                 </Viewbox>
                                 <Viewbox
                                     Grid.Row="0"
                                     Grid.Column="2"
                                     Height="16">
-                                    <SymbolIcon
-                                        Symbol="Attach"
-                                        Visibility="{x:Bind HasAttachments}" />
+                                    <SymbolIcon Symbol="Attach" Visibility="{x:Bind HasAttachments}" />
                                 </Viewbox>
                                 <Border
                                     Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="3"
-                                    MinWidth="20"
                                     Height="20"
+                                    MinWidth="20"
                                     Padding="4,0"
                                     VerticalAlignment="Center"
                                     Background="{ThemeResource AccentFillColorDefaultBrush}"
@@ -157,9 +153,7 @@
                             </Grid.ContextFlyout>
                         </Grid>
 
-                        <ItemsRepeater
-                            ItemsSource="{x:Bind Messages}"
-                            Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
+                        <ItemsRepeater ItemsSource="{x:Bind Messages}" Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
                             <DataTemplate x:DataType="models:MailData">
                                 <Button
                                     Margin="20,1,0,1"
@@ -191,9 +185,7 @@
                                                 <RowDefinition Height="auto" />
                                                 <RowDefinition Height="auto" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock
-                                                Style="{StaticResource ListSubTitleStyle}"
-                                                Text="{x:Bind Sender}" />
+                                            <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
                                             <TextBlock
                                                 Grid.Row="1"
                                                 Opacity="0.7"

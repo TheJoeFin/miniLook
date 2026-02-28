@@ -90,24 +90,50 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public void RebuildConversationGroups()
     {
-        var expandedConversations = ConversationGroups
-            .Where(g => g.IsExpanded)
-            .Select(g => g.ConversationId)
-            .ToHashSet();
-
-        ConversationGroups.Clear();
-
-        var groups = MailItems
+        Dictionary<string, List<MailData>> newGroupData = MailItems
             .GroupBy(m => m.ConversationId)
-            .Select(g => new ConversationGroup(g.Key, g))
-            .OrderByDescending(g => g.ReceivedDateTime);
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(m => m.ReceivedDateTime).ToList());
 
-        foreach (var group in groups)
+        List<string> desiredOrder = newGroupData
+            .OrderByDescending(kvp => kvp.Value[0].ReceivedDateTime)
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        HashSet<string> desiredIds = desiredOrder.ToHashSet();
+
+        // Remove groups that no longer exist
+        for (int i = ConversationGroups.Count - 1; i >= 0; i--)
         {
-            if (expandedConversations.Contains(group.ConversationId))
-                group.IsExpanded = true;
+            if (!desiredIds.Contains(ConversationGroups[i].ConversationId))
+                ConversationGroups.RemoveAt(i);
+        }
 
-            ConversationGroups.Add(group);
+        // Update existing groups and insert new ones in the correct order
+        for (int targetIndex = 0; targetIndex < desiredOrder.Count; targetIndex++)
+        {
+            string conversationId = desiredOrder[targetIndex];
+            List<MailData> messages = newGroupData[conversationId];
+
+            int currentIndex = -1;
+            for (int j = 0; j < ConversationGroups.Count; j++)
+            {
+                if (ConversationGroups[j].ConversationId == conversationId)
+                {
+                    currentIndex = j;
+                    break;
+                }
+            }
+
+            if (currentIndex >= 0)
+            {
+                ConversationGroups[currentIndex].SyncMessages(messages);
+                if (currentIndex != targetIndex)
+                    ConversationGroups.Move(currentIndex, targetIndex);
+            }
+            else
+            {
+                ConversationGroups.Insert(targetIndex, new ConversationGroup(conversationId, messages));
+            }
         }
     }
 
@@ -254,7 +280,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (clickedItem is not ConversationGroup group)
             return;
 
-        foreach (var message in group.Messages)
+        foreach (MailData message in group.Messages)
             MarkMessageIsReadAs(message, true);
     }
 
@@ -263,7 +289,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
-        var foldersResponse = await _graphClient.Me
+        MailFolderCollectionResponse? foldersResponse = await _graphClient.Me
             .MailFolders
             .GetAsync(config =>
             {
@@ -297,9 +323,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             }
             catch (Exception)
             {
-    #if DEBUG
+#if DEBUG
                 throw;
-    #endif
+#endif
             }
         }
     }
@@ -331,7 +357,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
-        var foldersResponse = await _graphClient.Me
+        MailFolderCollectionResponse? foldersResponse = await _graphClient.Me
             .MailFolders
             .GetAsync(config =>
             {
@@ -421,7 +447,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         }
 
         _graphClient = GraphService.Client;
-        var me = await _graphClient.Me.GetAsync();
+        User? me = await _graphClient.Me.GetAsync();
         AccountName = me?.DisplayName ?? string.Empty;
 
         await GetEvents();
@@ -507,7 +533,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
                 if (message.HasAttachments is true)
                 {
-                    var result = await _graphClient
+                    AttachmentCollectionResponse? result = await _graphClient
                         .Me.Messages[message.Id]
                         .Attachments.GetAsync();
 
@@ -586,14 +612,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         try
         {
             // Get the user's mailbox settings to determine their time zone
-            var user = await _graphClient.Me.GetAsync(config =>
+            User? user = await _graphClient.Me.GetAsync(config =>
             {
                 config.QueryParameters.Select = ["mailboxSettings"];
             });
 
             string timeZone = user?.MailboxSettings?.TimeZone ?? "UTC";
 
-            var eventsResponse = await _graphClient.Me.CalendarView.GetAsync(config =>
+            EventCollectionResponse? eventsResponse = await _graphClient.Me.CalendarView.GetAsync(config =>
             {
                 config.QueryParameters.StartDateTime = now.ToString("o");
                 config.QueryParameters.EndDateTime = endOfWeek.ToString("o");
