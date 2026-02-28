@@ -20,7 +20,7 @@
         <miniConverters:StringNavigateUriConverter x:Key="stringUriConverter" />
 
 
-        <DataTemplate x:Key="ItemTemplate" x:DataType="models:MailData">
+        <DataTemplate x:Key="ItemTemplate" x:DataType="models:ConversationGroup">
 
             <Border Margin="-6,0,-4,0">
                 <Border.Resources>
@@ -38,95 +38,173 @@
                             BehaviorOnInvoked="Close"
                             IconSource="{StaticResource ReadIcon}"
                             Invoked="ReadSwipeItem_Invoked"
-                            Text="Mark Read" />
+                            Text="Mark All Read" />
                     </SwipeItems>
                 </Border.Resources>
 
                 <SwipeControl LeftItems="{StaticResource left}" RightItems="{StaticResource right}">
-                    <Grid Height="60">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border
-                            Width="10"
-                            Height="10"
-                            Background="{ThemeResource AccentFillColorDefaultBrush}"
-                            CornerRadius="5"
-                            ToolTipService.ToolTip="This mail is Unread"
-                            Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
-                        <Grid
-                            Grid.Column="1"
-                            Margin="{StaticResource SmallLeftMargin}"
-                            VerticalAlignment="Center"
-                            ColumnSpacing="2"
-                            Opacity="{x:Bind IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="auto" />
-                                <RowDefinition Height="auto" />
-                            </Grid.RowDefinitions>
-
+                    <StackPanel>
+                        <Grid Height="60">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="auto" />
-                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Style="{StaticResource ListTitleStyle}"
-                                Text="{x:Bind Subject}" />
-                            <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Style="{StaticResource ListSubTitleStyle}"
-                                Text="{x:Bind Sender}" />
-                            <Viewbox
-                                Grid.Row="0"
+                            <Border
+                                Width="10"
+                                Height="10"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                CornerRadius="5"
+                                ToolTipService.ToolTip="This conversation has unread messages"
+                                Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                            <Grid
                                 Grid.Column="1"
-                                Height="16">
-                                <SymbolIcon
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Symbol="Calendar"
-                                    Visibility="{x:Bind IsEvent}" />
-                            </Viewbox>
-                            <Viewbox
-                                Grid.Row="0"
-                                Grid.Column="2"
-                                Height="16">
-                                <SymbolIcon
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Symbol="Attach"
-                                    Visibility="{x:Bind HasAttachments}" />
-                            </Viewbox>
+                                Margin="{StaticResource SmallLeftMargin}"
+                                VerticalAlignment="Center"
+                                ColumnSpacing="2"
+                                Opacity="{x:Bind LatestMessage.IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto" />
+                                    <RowDefinition Height="auto" />
+                                </Grid.RowDefinitions>
 
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="auto" />
+                                    <ColumnDefinition Width="auto" />
+                                    <ColumnDefinition Width="auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Style="{StaticResource ListTitleStyle}"
+                                    Text="{x:Bind Subject}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Style="{StaticResource ListSubTitleStyle}"
+                                    Text="{x:Bind Sender}" />
+                                <Viewbox
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Height="16">
+                                    <SymbolIcon
+                                        Symbol="Calendar"
+                                        Visibility="{x:Bind IsEvent}" />
+                                </Viewbox>
+                                <Viewbox
+                                    Grid.Row="0"
+                                    Grid.Column="2"
+                                    Height="16">
+                                    <SymbolIcon
+                                        Symbol="Attach"
+                                        Visibility="{x:Bind HasAttachments}" />
+                                </Viewbox>
+                                <Border
+                                    Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="3"
+                                    MinWidth="20"
+                                    Height="20"
+                                    Padding="4,0"
+                                    VerticalAlignment="Center"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="10"
+                                    Visibility="{x:Bind HasMultipleMessages}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                        Text="{x:Bind MessageCount}" />
+                                </Border>
+                            </Grid>
+                            <Grid
+                                Grid.Column="2"
+                                Margin="4,0"
+                                VerticalAlignment="Center"
+                                Visibility="{x:Bind HasMultipleMessages}">
+                                <FontIcon
+                                    FontSize="12"
+                                    Glyph="&#xE76C;"
+                                    Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                <FontIcon
+                                    FontSize="12"
+                                    Glyph="&#xE76F;"
+                                    Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}" />
+                            </Grid>
+                            <Grid.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem
+                                        x:Name="ArchiveContextMenuItem"
+                                        Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveConversationCommand}"
+                                        CommandParameter="{x:Bind}"
+                                        Text="Archive">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem
+                                        x:Name="MarkReadContextMenuItem"
+                                        Command="{Binding ElementName=MailListPage, Path=ViewModel.MarkConversationAsReadCommand}"
+                                        CommandParameter="{x:Bind}"
+                                        Text="Mark All As Read">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon FontSize="14" Glyph="&#xE8C3;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
                         </Grid>
-                        <Grid.ContextFlyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem
-                                    x:Name="ArchiveContextMenuItem"
-                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveItemCommand}"
+
+                        <ItemsRepeater
+                            ItemsSource="{x:Bind Messages}"
+                            Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
+                            <DataTemplate x:DataType="models:MailData">
+                                <Button
+                                    Margin="20,1,0,1"
+                                    Padding="8,6"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.NavigateToDetailCommand}"
                                     CommandParameter="{x:Bind}"
-                                    Text="Archive">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                <MenuFlyoutItem
-                                    x:Name="MarkReadContextMenuItem"
-                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.MarkMessageIsReadCommand}"
-                                    CommandParameter="{x:Bind}"
-                                    IsEnabled="{x:Bind isRead, Converter={StaticResource boolNegationConverter}}"
-                                    Text="Mark As Read">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon FontSize="14" Glyph="&#xE8C3;" />
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                            </MenuFlyout>
-                        </Grid.ContextFlyout>
-                    </Grid>
+                                    CornerRadius="4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border
+                                            Width="8"
+                                            Height="8"
+                                            VerticalAlignment="Center"
+                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            CornerRadius="4"
+                                            Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                        <Grid
+                                            Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="auto" />
+                                                <RowDefinition Height="auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock
+                                                Style="{StaticResource ListSubTitleStyle}"
+                                                Text="{x:Bind Sender}" />
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Opacity="0.7"
+                                                Style="{StaticResource ListSubTitleStyle}"
+                                                Text="{x:Bind Body}" />
+                                        </Grid>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsRepeater>
+                    </StackPanel>
                 </SwipeControl>
             </Border>
         </DataTemplate>
@@ -305,9 +383,8 @@
             IsItemClickEnabled="True"
             ItemClick="MailListView_ItemClick"
             ItemTemplate="{StaticResource ItemTemplate}"
-            ItemsSource="{x:Bind ViewModel.MailItems, Mode=OneWay}"
-            SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
-            SelectionMode="Single" />
+            ItemsSource="{x:Bind ViewModel.ConversationGroups, Mode=OneWay}"
+            SelectionMode="None" />
 
         <Grid
             x:Name="DebugPane"

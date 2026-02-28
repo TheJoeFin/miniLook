@@ -19,25 +19,29 @@ public sealed partial class ListDetailsPage : Page
 
     private void MailListView_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is MailData mailData)
+        if (e.ClickedItem is ConversationGroup group)
         {
-            ViewModel.NavigateToMailDetail(mailData);
+            if (group.HasMultipleMessages)
+                group.IsExpanded = !group.IsExpanded;
+            else
+                ViewModel.NavigateToMailDetail(group.LatestMessage);
         }
     }
 
     private async void ArchiveSwipeItem_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
     {
-        if (args.SwipeControl.DataContext is not MailData swipedItem)
+        if (args.SwipeControl.DataContext is not ConversationGroup group)
             return;
 
-        await ViewModel.ArchiveThisMailItem(swipedItem);
+        await ViewModel.ArchiveThisMailItem(group.LatestMessage);
     }
 
     private void ReadSwipeItem_Invoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
     {
-        if (args.SwipeControl.DataContext is not MailData swipedItem)
+        if (args.SwipeControl.DataContext is not ConversationGroup group)
             return;
 
-        ViewModel.MarkMessageIsReadAs(swipedItem, true);
+        foreach (var message in group.Messages)
+            ViewModel.MarkMessageIsReadAs(message, true);
     }
 }

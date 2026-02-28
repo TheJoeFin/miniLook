@@ -42,6 +42,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public ObservableCollection<MailData> MailItems { get; private set; } = [];
 
+    public ObservableCollection<ConversationGroup> ConversationGroups { get; private set; } = [];
+
     public ObservableCollection<Event> Events { get; private set; } = [];
 
     private GraphServiceClient? _graphClient;
@@ -84,6 +86,29 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
         if (!IsLoadingContent)
             RunBackgroundSync();
+    }
+
+    public void RebuildConversationGroups()
+    {
+        var expandedConversations = ConversationGroups
+            .Where(g => g.IsExpanded)
+            .Select(g => g.ConversationId)
+            .ToHashSet();
+
+        ConversationGroups.Clear();
+
+        var groups = MailItems
+            .GroupBy(m => m.ConversationId)
+            .Select(g => new ConversationGroup(g.Key, g))
+            .OrderByDescending(g => g.ReceivedDateTime);
+
+        foreach (var group in groups)
+        {
+            if (expandedConversations.Contains(group.ConversationId))
+                group.IsExpanded = true;
+
+            ConversationGroups.Add(group);
+        }
     }
 
     public async void RunBackgroundSync()
@@ -214,6 +239,25 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         await ArchiveThisMailItem(listDetailsMenuItem);
     }
 
+    [RelayCommand]
+    private async Task ArchiveConversation(object clickedItem)
+    {
+        if (clickedItem is not ConversationGroup group)
+            return;
+
+        await ArchiveThisMailItem(group.LatestMessage);
+    }
+
+    [RelayCommand]
+    private void MarkConversationAsRead(object clickedItem)
+    {
+        if (clickedItem is not ConversationGroup group)
+            return;
+
+        foreach (var message in group.Messages)
+            MarkMessageIsReadAs(message, true);
+    }
+
     public async Task ArchiveThisMailItem(MailData listDetailsMenuItem)
     {
         if (_graphClient is null)
@@ -234,9 +278,12 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         List<MailData> allOfConversation = MailItems.Where(m => m.ConversationId == listDetailsMenuItem.ConversationId).ToList();
 
         foreach (MailData conversationItem in allOfConversation)
-        {
             MailItems.Remove(conversationItem);
 
+        RebuildConversationGroups();
+
+        foreach (MailData conversationItem in allOfConversation)
+        {
             try
             {
                 _ = await _graphClient.Me
@@ -316,6 +363,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         }
 
         MailItems.Remove(listDetailsMenuItem);
+        RebuildConversationGroups();
+    }
+
+    [RelayCommand]
+    private void NavigateToDetail(object clickedItem)
+    {
+        if (clickedItem is MailData mailData)
+            NavigateToMailDetail(mailData);
     }
 
     public void NavigateToMailDetail(MailData mailData)
@@ -354,6 +409,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             MailItems.Add(mail);
 
         deltaLink = MailCacheService.DeltaLink;
+
+        RebuildConversationGroups();
 
         Selected = selectMailData;
 
@@ -508,6 +565,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         LastSync = DateTime.Now;
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
         App.SetTaskbarBadgeToNumber(NumberUnread);
+        RebuildConversationGroups();
         DebugText = DebugText.Insert(0, $"{DateTime.Now.ToShortTimeString()}: Mail synced\n");
     }
 
