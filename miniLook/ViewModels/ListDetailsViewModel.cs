@@ -331,6 +331,17 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
+    private void ToggleConversationRead(object clickedItem)
+    {
+        if (clickedItem is not ConversationGroup group)
+            return;
+
+        bool newIsRead = !group.LatestMessage.IsRead;
+        foreach (MailData message in group.Messages)
+            MarkMessageIsReadAs(message, newIsRead);
+    }
+
+    [RelayCommand]
     private void PopOutConversation(object clickedItem)
     {
         if (clickedItem is not ConversationGroup group)

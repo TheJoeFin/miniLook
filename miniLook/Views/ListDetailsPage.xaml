@@ -22,7 +22,10 @@
 
         <DataTemplate x:Key="ItemTemplate" x:DataType="models:ConversationGroup">
 
-            <Border Margin="-6,0,-4,0">
+            <Border
+                Margin="-6,0,-4,0"
+                PointerEntered="ConversationItem_PointerEntered"
+                PointerExited="ConversationItem_PointerExited">
                 <Border.Resources>
                     <FontIconSource x:Key="ArchiveIcon" Glyph="&#xE7B8;" />
                     <FontIconSource x:Key="ReadIcon" Glyph="&#xE8C3;" />
@@ -49,14 +52,39 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Border
-                                Width="10"
-                                Height="10"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                CornerRadius="5"
-                                ToolTipService.ToolTip="This conversation has unread messages"
-                                Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                            <Grid Width="20" VerticalAlignment="Center">
+                                <Border
+                                    Width="10"
+                                    Height="10"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="5"
+                                    ToolTipService.ToolTip="This conversation has unread messages"
+                                    Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                <Button
+                                    Width="20"
+                                    Height="20"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="10"
+                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.ToggleConversationReadCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    ToolTipService.ToolTip="Toggle read/unread"
+                                    Visibility="{x:Bind IsHovered, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+                                    <Grid>
+                                        <FontIcon
+                                            FontSize="12"
+                                            Glyph="&#xE8C3;"
+                                            Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                        <FontIcon
+                                            FontSize="12"
+                                            Glyph="&#xE715;"
+                                            Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, Mode=OneWay}" />
+                                    </Grid>
+                                </Button>
+                            </Grid>
                             <Grid
                                 Grid.Column="1"
                                 Margin="{StaticResource SmallLeftMargin}"
@@ -129,6 +157,21 @@
                                     Glyph="&#xE76F;"
                                     Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}" />
                             </Grid>
+                            <Button
+                                Grid.Column="3"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveConversationCommand}"
+                                CommandParameter="{x:Bind}"
+                                ToolTipService.ToolTip="Archive"
+                                Visibility="{x:Bind IsHovered, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+                                <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                            </Button>
                             <Grid.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem
@@ -388,6 +431,7 @@
             ItemClick="MailListView_ItemClick"
             ItemTemplate="{StaticResource ItemTemplate}"
             ItemsSource="{x:Bind ViewModel.FilteredConversationGroups, Mode=OneWay}"
+            PointerExited="MailListView_PointerExited"
             SelectionMode="None">
             <ListView.Footer>
                 <HyperlinkButton

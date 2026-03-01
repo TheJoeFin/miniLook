@@ -10,6 +10,9 @@ public partial class ConversationGroup : ObservableObject
     [ObservableProperty]
     private bool isExpanded = false;
 
+    [ObservableProperty]
+    private bool isHovered = false;
+
     public ObservableCollection<MailData> Messages { get; } = [];
 
     public MailData LatestMessage => Messages[0];
