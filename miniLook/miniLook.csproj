@@ -17,12 +17,13 @@
       <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
       <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
       <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
-      <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
-      <GenerateTestArtifacts>True</GenerateTestArtifacts>
-      <AppxBundle>Never</AppxBundle>
+      <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
+      <GenerateTestArtifacts>False</GenerateTestArtifacts>
+      <AppxBundle>Always</AppxBundle>
       <WindowsAppSDKSelfContained>True</WindowsAppSDKSelfContained>
       <AppxPackageDir>AppPackages\</AppxPackageDir>
-      <AppxBundlePlatforms>x86|x64|arm64</AppxBundlePlatforms>
+      <AppxBundlePlatforms>x64|arm64</AppxBundlePlatforms>
+      <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\HtmlViewWindow.xaml" />
