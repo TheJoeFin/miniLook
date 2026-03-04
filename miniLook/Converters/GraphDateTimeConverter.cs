@@ -1,5 +1,5 @@
 ﻿using Humanizer;
-using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Microsoft.UI.Xaml.Data;
 
 namespace miniLook.Converters;

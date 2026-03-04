@@ -16,6 +16,9 @@ namespace miniLook.ViewModels;
 public partial class SettingsViewModel : ObservableRecipient
 {
     private readonly IThemeSelectorService _themeSelectorService;
+    private readonly ILocalSettingsService _localSettingsService;
+
+    internal const string AlwaysRenderHtmlSettingsKey = "AlwaysRenderHtml";
 
     [ObservableProperty]
     private ElementTheme _elementTheme;
@@ -26,15 +29,19 @@ public partial class SettingsViewModel : ObservableRecipient
     [ObservableProperty]
     private bool canClearCache = true;
 
+    [ObservableProperty]
+    private bool _alwaysRenderHtml;
+
     public ICommand SwitchThemeCommand { get; }
 
     public INavigationService NavigationService { get; }
 
     public IMailCacheService MailCacheService { get; }
 
-    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService, IMailCacheService mailCacheService)
+    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService, IMailCacheService mailCacheService, ILocalSettingsService localSettingsService)
     {
         _themeSelectorService = themeSelectorService;
+        _localSettingsService = localSettingsService;
         _elementTheme = _themeSelectorService.Theme;
         _versionDescription = GetVersionDescription();
 
@@ -50,6 +57,20 @@ public partial class SettingsViewModel : ObservableRecipient
 
         NavigationService = navigationService;
         MailCacheService = mailCacheService;
+
+        InitializeSettingsAsync();
+    }
+
+    private async void InitializeSettingsAsync()
+    {
+        bool value = await _localSettingsService.ReadSettingAsync<bool>(AlwaysRenderHtmlSettingsKey);
+        _alwaysRenderHtml = value;
+        OnPropertyChanged(nameof(AlwaysRenderHtml));
+    }
+
+    partial void OnAlwaysRenderHtmlChanged(bool value)
+    {
+        _ = _localSettingsService.SaveSettingAsync(AlwaysRenderHtmlSettingsKey, value);
     }
 
     [RelayCommand]
@@ -62,8 +83,8 @@ public partial class SettingsViewModel : ObservableRecipient
     [RelayCommand]
     private async Task ClearCachedData()
     {
-        await MailCacheService.ClearMailCacheAsync();
-        await MailCacheService.SaveDeltaLink(null);
+        ListDetailsViewModel listDetailsViewModel = App.GetService<ListDetailsViewModel>();
+        await listDetailsViewModel.ClearOutContents();
         CanClearCache = false;
     }
 

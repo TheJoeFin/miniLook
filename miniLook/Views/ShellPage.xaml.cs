@@ -12,9 +12,6 @@ public sealed partial class ShellPage : Page
         ViewModel = viewModel;
         InitializeComponent();
 
-        App.MainWindow.ExtendsContentIntoTitleBar = true;
-        App.MainWindow.SetTitleBar(AppTitleBar);
-
         ViewModel.NavigationService.Frame = NavigationFrame;
     }
 }

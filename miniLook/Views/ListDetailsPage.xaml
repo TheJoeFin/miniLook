@@ -2,14 +2,13 @@
     x:Class="miniLook.Views.ListDetailsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
-    xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
+    xmlns:converters="using:CommunityToolkit.WinUI.Converters"
+    xmlns:ctLayouts="using:CommunityToolkit.WinUI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:graph="using:Microsoft.Graph"
+    xmlns:graph="using:Microsoft.Graph.Models"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:miniConverters="using:miniLook.Converters"
     xmlns:models="using:miniLook.Models"
-    xmlns:views="using:miniLook.Views"
     x:Name="MailListPage"
     mc:Ignorable="d">
     <Page.Resources>
@@ -21,9 +20,12 @@
         <miniConverters:StringNavigateUriConverter x:Key="stringUriConverter" />
 
 
-        <DataTemplate x:Key="ItemTemplate" x:DataType="models:MailData">
+        <DataTemplate x:Key="ItemTemplate" x:DataType="models:ConversationGroup">
 
-            <Border Margin="-6,0,-4,0">
+            <Border
+                Margin="-6,0,-4,0"
+                PointerEntered="ConversationItem_PointerEntered"
+                PointerExited="ConversationItem_PointerExited">
                 <Border.Resources>
                     <FontIconSource x:Key="ArchiveIcon" Glyph="&#xE7B8;" />
                     <FontIconSource x:Key="ReadIcon" Glyph="&#xE8C3;" />
@@ -39,124 +41,219 @@
                             BehaviorOnInvoked="Close"
                             IconSource="{StaticResource ReadIcon}"
                             Invoked="ReadSwipeItem_Invoked"
-                            Text="Mark Read" />
+                            Text="Mark All Read" />
                     </SwipeItems>
                 </Border.Resources>
 
                 <SwipeControl LeftItems="{StaticResource left}" RightItems="{StaticResource right}">
-                    <Grid Height="60">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border
-                            Width="10"
-                            Height="10"
-                            Background="{ThemeResource AccentFillColorDefaultBrush}"
-                            CornerRadius="5"
-                            ToolTipService.ToolTip="This mail is Unread"
-                            Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
-                        <Grid
-                            Grid.Column="1"
-                            Margin="{StaticResource SmallLeftMargin}"
-                            VerticalAlignment="Center"
-                            ColumnSpacing="2"
-                            Opacity="{x:Bind IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="auto" />
-                                <RowDefinition Height="auto" />
-                            </Grid.RowDefinitions>
-
+                    <StackPanel>
+                        <Grid Height="60">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="auto" />
-                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Style="{StaticResource ListTitleStyle}"
-                                Text="{x:Bind Subject}" />
-                            <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Style="{StaticResource ListSubTitleStyle}"
-                                Text="{x:Bind Sender}" />
-                            <Viewbox
-                                Grid.Row="0"
+                            <Grid Width="20" VerticalAlignment="Center">
+                                <Border
+                                    Width="10"
+                                    Height="10"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="5"
+                                    ToolTipService.ToolTip="This conversation has unread messages"
+                                    Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                <Button
+                                    Width="20"
+                                    Height="20"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="10"
+                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.ToggleConversationReadCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    ToolTipService.ToolTip="Toggle read/unread"
+                                    Visibility="{x:Bind IsHovered, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+                                    <Grid>
+                                        <FontIcon
+                                            FontSize="12"
+                                            Glyph="&#xE8C3;"
+                                            Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                        <FontIcon
+                                            FontSize="12"
+                                            Glyph="&#xE715;"
+                                            Visibility="{x:Bind LatestMessage.IsRead, Converter={StaticResource boolToVisConverter}, Mode=OneWay}" />
+                                    </Grid>
+                                </Button>
+                            </Grid>
+                            <Grid
                                 Grid.Column="1"
-                                Height="16">
-                                <SymbolIcon
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Symbol="Calendar"
-                                    Visibility="{x:Bind IsEvent}" />
-                            </Viewbox>
-                            <Viewbox
-                                Grid.Row="0"
-                                Grid.Column="2"
-                                Height="16">
-                                <SymbolIcon
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Symbol="Attach"
-                                    Visibility="{x:Bind HasAttachments}" />
-                            </Viewbox>
+                                Margin="{StaticResource SmallLeftMargin}"
+                                VerticalAlignment="Center"
+                                ColumnSpacing="2"
+                                Opacity="{x:Bind LatestMessage.IsRead, Mode=OneWay, Converter={StaticResource isReadToOpacityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto" />
+                                    <RowDefinition Height="auto" />
+                                </Grid.RowDefinitions>
 
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="auto" />
+                                    <ColumnDefinition Width="auto" />
+                                    <ColumnDefinition Width="auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Style="{StaticResource ListTitleStyle}"
+                                    Text="{x:Bind Subject}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Style="{StaticResource ListSubTitleStyle}"
+                                    Text="{x:Bind Sender}" />
+                                <Viewbox
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Height="16">
+                                    <SymbolIcon Symbol="Calendar" Visibility="{x:Bind IsEvent}" />
+                                </Viewbox>
+                                <Viewbox
+                                    Grid.Row="0"
+                                    Grid.Column="2"
+                                    Height="16">
+                                    <SymbolIcon Symbol="Attach" Visibility="{x:Bind HasAttachments}" />
+                                </Viewbox>
+                                <Border
+                                    Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="3"
+                                    Height="20"
+                                    MinWidth="20"
+                                    Padding="4,0"
+                                    VerticalAlignment="Center"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="10"
+                                    Visibility="{x:Bind HasMultipleMessages}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                        Text="{x:Bind MessageCount}" />
+                                </Border>
+                            </Grid>
+                            <Grid
+                                Grid.Column="2"
+                                Margin="4,0"
+                                VerticalAlignment="Center"
+                                Visibility="{x:Bind HasMultipleMessages}">
+                                <FontIcon
+                                    FontSize="12"
+                                    Glyph="&#xE76C;"
+                                    Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                <FontIcon
+                                    FontSize="12"
+                                    Glyph="&#xE76F;"
+                                    Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}" />
+                            </Grid>
+                            <Button
+                                Grid.Column="3"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveConversationCommand}"
+                                CommandParameter="{x:Bind}"
+                                ToolTipService.ToolTip="Archive"
+                                Visibility="{x:Bind IsHovered, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+                                <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                            </Button>
+                            <Grid.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem
+                                        x:Name="ArchiveContextMenuItem"
+                                        Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveConversationCommand}"
+                                        CommandParameter="{x:Bind}"
+                                        Text="Archive">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon FontSize="14" Glyph="&#xE7B8;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem
+                                        x:Name="MarkReadContextMenuItem"
+                                        Command="{Binding ElementName=MailListPage, Path=ViewModel.MarkConversationAsReadCommand}"
+                                        CommandParameter="{x:Bind}"
+                                        Text="Mark All As Read">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon FontSize="14" Glyph="&#xE8C3;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem
+                                        x:Name="PopOutContextMenuItem"
+                                        Command="{Binding ElementName=MailListPage, Path=ViewModel.PopOutConversationCommand}"
+                                        CommandParameter="{x:Bind}"
+                                        Text="Pop out">
+                                        <MenuFlyoutItem.Icon>
+                                            <SymbolIcon Symbol="NewWindow" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
                         </Grid>
-                        <Grid.ContextFlyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem
-                                    x:Name="ArchiveContextMenuItem"
-                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.ArchiveItemCommand}"
+
+                        <ItemsRepeater ItemsSource="{x:Bind Messages}" Visibility="{x:Bind IsExpanded, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
+                            <DataTemplate x:DataType="models:MailData">
+                                <Button
+                                    Margin="20,1,0,1"
+                                    Padding="8,6"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.NavigateToDetailCommand}"
                                     CommandParameter="{x:Bind}"
-                                    Text="Archive">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon FontSize="14" Glyph="&#xE7B8;" />
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                <MenuFlyoutItem
-                                    x:Name="MarkReadContextMenuItem"
-                                    Command="{Binding ElementName=MailListPage, Path=ViewModel.MarkMessageIsReadCommand}"
-                                    CommandParameter="{x:Bind}"
-                                    IsEnabled="{x:Bind isRead, Converter={StaticResource boolNegationConverter}}"
-                                    Text="Mark As Read">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon FontSize="14" Glyph="&#xE8C3;" />
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                            </MenuFlyout>
-                        </Grid.ContextFlyout>
-                    </Grid>
+                                    CornerRadius="4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border
+                                            Width="8"
+                                            Height="8"
+                                            VerticalAlignment="Center"
+                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            CornerRadius="4"
+                                            Visibility="{x:Bind IsRead, Converter={StaticResource boolToVisConverter}, ConverterParameter=true, Mode=OneWay}" />
+                                        <Grid
+                                            Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="auto" />
+                                                <RowDefinition Height="auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Style="{StaticResource ListSubTitleStyle}" Text="{x:Bind Sender}" />
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Opacity="0.7"
+                                                Style="{StaticResource ListSubTitleStyle}"
+                                                Text="{x:Bind Body}" />
+                                        </Grid>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsRepeater>
+                    </StackPanel>
                 </SwipeControl>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="DetailsTemplate">
-            <Grid>
-                <views:ListDetailsDetailControl ListDetailsMenuItem="{Binding}" />
-            </Grid>
-        </DataTemplate>
 
-        <DataTemplate x:Key="NoSelectionContentTemplate">
-            <Grid>
-                <TextBlock
-                    x:Uid="ListDetails_NoSelection"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    TextAlignment="Center" />
-            </Grid>
-        </DataTemplate>
-
-        <DataTemplate x:Key="ListHeaderTemplate">
-            <Grid Height="40">
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Style="{StaticResource ListTitleStyle}"
-                    Text="{Binding}" />
-            </Grid>
-        </DataTemplate>
     </Page.Resources>
 
     <Grid x:Name="ContentArea">
@@ -177,49 +274,50 @@
                 <ToggleButton
                     x:Name="CalendarToggleButton"
                     Width="48"
-                    RelativePanel.AlignLeftWithPanel="True"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
                     Style="{StaticResource DefaultToggleButtonStyle}"
                     ToolTipService.ToolTip="Show a couple of events in the next couple days">
                     <SymbolIcon Symbol="Calendar" />
                 </ToggleButton>
-
-                <TextBlock
-                    x:Name="UnreadMailNumber"
-                    Padding="10,0,6,0"
-                    VerticalAlignment="Center"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="CalendarToggleButton"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="{x:Bind ViewModel.NumberUnread, Mode=OneWay}" />
-                <TextBlock
-                    x:Name="UnreadMailText"
-                    VerticalAlignment="Center"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="UnreadMailNumber"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="unread"
-                    ToolTipService.ToolTip="{x:Bind ViewModel.LastSync, Mode=OneWay, Converter={StaticResource stringFormatConverter}, ConverterParameter='{}Last Sync at {0:t}'}" />
-
+                <Grid x:Name="SelectorBarContainer">
+                    <SelectorBar
+                        x:Name="FocusedOtherSelectorBar"
+                        SelectionChanged="FocusedOtherSelectorBar_SelectionChanged"
+                        SizeChanged="FocusedOtherSelectorBar_SizeChanged">
+                        <SelectorBarItem
+                            x:Name="FocusedSelectorBarItem"
+                            IsSelected="True"
+                            Text="Focused" />
+                        <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
+                    </SelectorBar>
+                    <InfoBadge
+                        x:Name="FocusedInfoBadge"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False"
+                        Visibility="{x:Bind ViewModel.HasFocusedUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}"
+                        Value="{x:Bind ViewModel.FocusedUnreadCount, Mode=OneWay}" />
+                    <InfoBadge
+                        x:Name="OtherInfoBadge"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False"
+                        Visibility="{x:Bind ViewModel.HasOtherUnread, Mode=OneWay, Converter={StaticResource boolToVisConverter}}"
+                        Value="{x:Bind ViewModel.OtherUnreadCount, Mode=OneWay}" />
+                </Grid>
                 <FontIcon
                     x:Name="NoNetworkIcon"
                     Margin="6"
                     FontSize="16"
                     Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
                     Glyph="&#xF384;"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="UnreadMailText"
                     ToolTipService.ToolTip="No network"
                     Visibility="{x:Bind ViewModel.HasInternet, Mode=OneWay, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
-
                 <ProgressRing
                     Width="16"
                     Height="16"
                     Margin="6"
                     VerticalAlignment="Center"
-                    IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}"
-                    RelativePanel.AlignVerticalCenterWithPanel="True"
-                    RelativePanel.RightOf="NoNetworkIcon" />
+                    IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}" />
             </StackPanel>
 
             <CommandBar
@@ -227,13 +325,15 @@
                 Background="Transparent"
                 DefaultLabelPosition="Right">
                 <CommandBar.PrimaryCommands>
-                    <AppBarToggleButton
-                        x:Name="CompactOverlayToggleButton"
-                        Command="{x:Bind ViewModel.ToggleOverlayModeCommand}"
-                        Icon="BackToWindow"
-                        IsChecked="{x:Bind ViewModel.IsOverlayMode, Mode=OneWay}"
+                    <AppBarButton
+                        x:Name="PopOutButton"
+                        Click="PopOutButton_Click"
                         LabelPosition="Collapsed"
-                        ToolTipService.ToolTip="Enter Compact Overlay Mode" />
+                        ToolTipService.ToolTip="Pop out to separate window">
+                        <AppBarButton.Icon>
+                            <SymbolIcon Symbol="NewWindow" />
+                        </AppBarButton.Icon>
+                    </AppBarButton>
                     <AppBarButton
                         x:Name="ComposeNewMailButton"
                         Command="{x:Bind ViewModel.GoToSendMailCommand}"
@@ -283,7 +383,7 @@
             Visibility="{x:Bind CalendarToggleButton.IsChecked, Converter={StaticResource boolToVisConverter}, Mode=OneWay}">
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}">
                 <ItemsRepeater.Layout>
-                    <controls:WrapLayout HorizontalSpacing="12" VerticalSpacing="12" />
+                    <ctLayouts:WrapLayout HorizontalSpacing="12" VerticalSpacing="12" />
                 </ItemsRepeater.Layout>
                 <DataTemplate x:DataType="graph:Event">
                     <Grid
@@ -322,20 +422,35 @@
                 </DataTemplate>
             </ItemsRepeater>
         </Grid>
-        <controls:ListDetailsView
-            x:Name="ListDetailsViewControl"
-            x:Uid="ListDetails"
+        <ListView
+            x:Name="MailListView"
             Grid.Row="2"
-            BackButtonBehavior="Inline"
             Background="Transparent"
             BorderBrush="Transparent"
-            DetailsTemplate="{StaticResource DetailsTemplate}"
+            IsItemClickEnabled="True"
+            ItemClick="MailListView_ItemClick"
             ItemTemplate="{StaticResource ItemTemplate}"
-            ItemsSource="{x:Bind ViewModel.MailItems, Mode=OneWay}"
-            ListHeaderTemplate="{StaticResource ListHeaderTemplate}"
-            NoSelectionContentTemplate="{StaticResource NoSelectionContentTemplate}"
-            SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
-            ViewStateChanged="OnViewStateChanged" />
+            ItemsSource="{x:Bind ViewModel.FilteredConversationGroups, Mode=OneWay}"
+            PointerExited="MailListView_PointerExited"
+            SelectionMode="None">
+            <ListView.Footer>
+                <HyperlinkButton
+                    Margin="8,4,8,12"
+                    Padding="12,8"
+                    HorizontalAlignment="Stretch"
+                    Command="{x:Bind ViewModel.LoadMoreMonthsCommand}"
+                    ToolTipService.ToolTip="Extend the loaded email history by one more month"
+                    Visibility="{x:Bind ViewModel.HasOlderMail, Mode=OneWay, Converter={StaticResource boolToVisConverter}}">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <SymbolIcon Symbol="Download" />
+                        <TextBlock Text="Load 1 more month of email" />
+                    </StackPanel>
+                </HyperlinkButton>
+            </ListView.Footer>
+        </ListView>
 
         <Grid
             x:Name="DebugPane"

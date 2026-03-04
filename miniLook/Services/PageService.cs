@@ -20,6 +20,7 @@ public class PageService : IPageService
         Configure<WelcomeViewModel, WelcomePage>();
         Configure<SendMailViewModel, SendMailPage>();
         Configure<GraphExplainerViewModel, GraphExplainerPage>();
+        Configure<MailDetailViewModel, MailDetailPage>();
         Configure<RenderWebViewViewModel, RenderWebViewPage>();
     }
 

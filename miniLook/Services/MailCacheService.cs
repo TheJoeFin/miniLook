@@ -11,6 +11,10 @@ internal class MailCacheService : IMailCacheService
 
     private const string DeltaLinkKey = "MailCacheDeltaLink";
 
+    private const string MailWindowMonthsKey = "MailWindowMonths";
+
+    private const int DefaultMailWindowMonths = 2;
+
     private readonly ILocalSettingsService _localSettingsService;
 
     public MailCacheService(ILocalSettingsService localSettingsService)
@@ -19,6 +23,8 @@ internal class MailCacheService : IMailCacheService
     }
 
     public string? DeltaLink { get; set; }
+
+    public int MailWindowMonths { get; set; } = DefaultMailWindowMonths;
 
     public async Task ClearMailCacheAsync()
     {
@@ -67,12 +73,20 @@ internal class MailCacheService : IMailCacheService
     public async Task InitializeAsync()
     {
         DeltaLink = await _localSettingsService.ReadSettingAsync<string?>(DeltaLinkKey);
+        int? savedMonths = await _localSettingsService.ReadSettingAsync<int?>(MailWindowMonthsKey);
+        MailWindowMonths = savedMonths ?? DefaultMailWindowMonths;
     }
 
     public async Task SaveDeltaLink(string? deltaLink)
     {
         DeltaLink = deltaLink;
         await _localSettingsService.SaveSettingAsync(DeltaLinkKey, deltaLink);
+    }
+
+    public async Task SaveMailWindowMonthsAsync(int months)
+    {
+        MailWindowMonths = months;
+        await _localSettingsService.SaveSettingAsync(MailWindowMonthsKey, months);
     }
 
     public async Task SaveEmailsAsync(IEnumerable<MailData> allMailData)
@@ -90,5 +104,6 @@ internal class MailCacheService : IMailCacheService
         catch (IOException)
         {
         }
+        // TODO: Handle exceptions properly, maybe with retry logic
     }
 }

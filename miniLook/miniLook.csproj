@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
       <OutputType>WinExe</OutputType>
-      <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+      <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
       <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
-      <WindowsSdkPackageVersion>10.0.19041.38</WindowsSdkPackageVersion>
       <RootNamespace>miniLook</RootNamespace>
       <ApplicationManifest>app.manifest</ApplicationManifest>
       <Platforms>x86;x64;ARM64</Platforms>
@@ -13,40 +12,46 @@
       <ImplicitUsings>enable</ImplicitUsings>
       <EnableMsixTooling>true</EnableMsixTooling>
       <Nullable>enable</Nullable>
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
       <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
       <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
       <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
       <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
-      <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
-      <GenerateTestArtifacts>True</GenerateTestArtifacts>
-      <AppxBundle>Never</AppxBundle>
+      <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
+      <GenerateTestArtifacts>False</GenerateTestArtifacts>
+      <AppxBundle>Always</AppxBundle>
       <WindowsAppSDKSelfContained>True</WindowsAppSDKSelfContained>
       <AppxPackageDir>AppPackages\</AppxPackageDir>
-      <AppxBundlePlatforms>x86|x64|arm64</AppxBundlePlatforms>
+      <AppxBundlePlatforms>x64|arm64</AppxBundlePlatforms>
+      <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\HtmlViewWindow.xaml" />
+    <None Remove="Views\MailItemWindow.xaml" />
+    <None Remove="Views\PopOutWindow.xaml" />
     <None Remove="Views\ShellPage.xaml" />
   </ItemGroup>
-
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Authentication.Msal" Version="7.1.4" />
-    <PackageReference Include="CommunityToolkit.Graph" Version="7.1.4" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-    <PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.1.240821" />
-    <PackageReference Include="CommunityToolkit.WinUI.Helpers" Version="8.0.240109" />
-    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls" Version="7.1.2" />
-    <PackageReference Include="Dapplo.Windows.User32" Version="1.0.28" />
-    <PackageReference Include="Humanizer.Core" Version="3.0.0-beta.54" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0-preview.7.24405.7" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.240829007" />
-    <PackageReference Include="Microsoft.Xaml.Behaviors.WinUI.Managed" Version="2.0.9" />
-    <PackageReference Include="WinUIEx" Version="2.3.4" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.TokenizingTextBox" Version="8.2.251219" />
+    <PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.2.251219" />
+    <PackageReference Include="CommunityToolkit.WinUI.Helpers" Version="8.2.251219" />
+
+    <PackageReference Include="Dapplo.Windows.User32" Version="2.0.83" />
+    <PackageReference Include="Humanizer.Core" Version="3.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Graph" Version="5.103.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.82.1" />
+    <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.82.1" />
+    <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.82.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260209005" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.WinUI.Managed" Version="3.0.1" />
+    <PackageReference Include="WinUIEx" Version="2.9.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -64,6 +69,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Page Update="Views\HtmlViewWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\MailItemWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\PopOutWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
