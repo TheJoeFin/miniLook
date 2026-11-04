@@ -32,7 +32,18 @@ public partial class ShellViewModel : ObservableRecipient
     public ShellViewModel(INavigationService navigationService)
     {
         NavigationService = navigationService;
+    }
+
+    public void OnShown()
+    {
+        NavigationService.Navigated -= OnNavigated;
         NavigationService.Navigated += OnNavigated;
+        IsBackEnabled = NavigationService.CanGoBack;
+    }
+
+    public void OnHidden()
+    {
+        NavigationService.Navigated -= OnNavigated;
     }
 
     private void OnNavigated(object sender, NavigationEventArgs e)

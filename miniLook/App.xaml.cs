@@ -36,6 +36,7 @@ namespace miniLook;
 public partial class App : Application
 {
     private TrayIcon? _trayIcon;
+    private TrayFlyoutWindow? _flyoutWindow;
     private readonly UISettings _uiSettings = new();
     private Mutex? _singleInstanceMutex;
     private EventWaitHandle? _trayIconRestoreEvent;
@@ -68,6 +69,7 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
 
         Host = Microsoft.Extensions.Hosting.Host.
         CreateDefaultBuilder().
@@ -145,6 +147,7 @@ public partial class App : Application
                 try
                 {
                     using EventWaitHandle restoreEvent = EventWaitHandle.OpenExisting(restoreEventName);
+                    Windows.Win32.PInvoke.AllowSetForegroundWindow(uint.MaxValue);
                     restoreEvent.Set();
                 }
                 catch
@@ -192,11 +195,12 @@ public partial class App : Application
         _trayIcon.Selected += TrayIcon_Selected;
         _trayIcon.ContextMenu += TrayIcon_ContextMenu;
         _trayIcon.IsVisible = true;
+        WindowPlacementService.SetTrayIcon(_trayIcon);
     }
 
     private void TrayIcon_Selected(TrayIcon sender, TrayIconEventArgs args)
     {
-        args.Flyout = CreateAppFlyout();
+        EnsureFlyout().Toggle();
     }
 
     private void TrayIcon_ContextMenu(TrayIcon sender, TrayIconEventArgs args)
@@ -204,41 +208,24 @@ public partial class App : Application
         args.Flyout = CreateContextMenu();
     }
 
-    private Flyout CreateAppFlyout()
+    private TrayFlyoutWindow EnsureFlyout()
     {
-        ShellPage shellPage = GetService<ShellPage>();
-
-        Flyout flyout = new()
+        if (_flyoutWindow is null)
         {
-            Content = shellPage,
-            FlyoutPresenterStyle = CreateNoPaddingStyle(),
-        };
+            _flyoutWindow = new TrayFlyoutWindow(GetService<ShellPage>());
+            _flyoutWindow.Closed += (_, _) =>
+            {
+                _flyoutWindow = null;
+                MemoryService.ReleaseIdle();
+            };
+        }
 
-        flyout.Opened += (s, e) =>
-        {
-            INavigationService navService = GetService<INavigationService>();
-            IGraphService graphService = GetService<IGraphService>();
-            if (graphService.IsAuthenticated)
-                navService.NavigateTo(typeof(ListDetailsViewModel).FullName!);
-            else
-                navService.NavigateTo(typeof(WelcomeViewModel).FullName!);
-        };
-
-        flyout.Closing += (s, e) =>
-        {
-            if (s is Flyout f)
-                f.Content = null;
-        };
-
-        return flyout;
+        return _flyoutWindow;
     }
 
-    private static Style CreateNoPaddingStyle()
+    private void ShowFlyout()
     {
-        Style style = new(typeof(FlyoutPresenter));
-        style.Setters.Add(new Setter(FlyoutPresenter.PaddingProperty, new Thickness(0)));
-        style.Setters.Add(new Setter(FlyoutPresenter.CornerRadiusProperty, new CornerRadius(8)));
-        return style;
+        EnsureFlyout().ShowPopup();
     }
 
     private MenuFlyout CreateContextMenu()
@@ -249,8 +236,7 @@ public partial class App : Application
         };
         checkMailItem.Click += (_, _) =>
         {
-            // Open the flyout to trigger a mail check via navigation
-            // The tray icon Selected event will handle showing the UI
+            ShowFlyout();
         };
 
         MenuFlyoutItem openOutlookItem = new()
@@ -292,9 +278,13 @@ public partial class App : Application
 
     private void ExitApplication()
     {
+        GetService<IBackgroundSyncService>().Stop();
+        _restoreEventMonitorTimer?.Stop();
+        _flyoutWindow?.CloseWindow();
         _trayIcon?.Dispose();
         _trayIcon = null;
         MainWindow.Close();
+        Exit();
     }
 
     #endregion
@@ -421,9 +411,13 @@ public partial class App : Application
     {
         try
         {
-            InitializeTrayIcon();
+            if (_trayIcon is null)
+                InitializeTrayIcon();
+            else
+                _trayIcon.IsVisible = true;
             await UpdateTrayIconAsync();
             UpdateTrayTooltip();
+            ShowFlyout();
         }
         catch
         {

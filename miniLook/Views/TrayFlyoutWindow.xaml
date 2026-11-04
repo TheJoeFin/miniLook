@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ex:WindowEx
+    x:Class="miniLook.Views.TrayFlyoutWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ex="using:WinUIEx"
+    Title="miniLook">
+    <Grid x:Name="PopupRoot" KeyboardAcceleratorPlacementMode="Hidden">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Escape" Invoked="Escape_Invoked" />
+        </Grid.KeyboardAccelerators>
+        <ContentPresenter x:Name="PageHost" />
+    </Grid>
+</ex:WindowEx>
