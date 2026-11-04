@@ -5,8 +5,8 @@
       <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
       <RootNamespace>miniLook</RootNamespace>
       <ApplicationManifest>app.manifest</ApplicationManifest>
-      <Platforms>x86;x64;ARM64</Platforms>
-      <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)')) &gt;= 8">win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+      <Platforms>x64;ARM64</Platforms>
+      <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)')) &gt;= 8">win-x64;win-arm64</RuntimeIdentifiers>
       <PublishProfile>win-$(Platform).pubxml</PublishProfile>
       <UseWinUI>true</UseWinUI>
       <ImplicitUsings>enable</ImplicitUsings>
@@ -25,6 +25,11 @@
       <AppxBundlePlatforms>x64|arm64</AppxBundlePlatforms>
       <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
   </PropertyGroup>
+  <PropertyGroup Label="GitHub release identity">
+      <GitHubIdentityName>abd5d8ee-8947-4609-8df9-78b24887d3e2</GitHubIdentityName>
+      <GitHubIdentityPublisher>CN=Joseph Finney, O=Joseph Finney, L=Milwaukee, S=Wisconsin, C=US, PostalCode=53212</GitHubIdentityPublisher>
+      <GitHubPublisherDisplayName>JoeFinApps</GitHubPublisherDisplayName>
+  </PropertyGroup>
   <ItemGroup>
     <None Remove="Views\HtmlViewWindow.xaml" />
     <None Remove="Views\MailItemWindow.xaml" />
@@ -33,6 +38,10 @@
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
+    <Content Include="$(ReleaseAppInstallerPath)" Condition="'$(ReleaseAppInstallerPath)' != ''">
+      <Link>Update.appinstaller</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
