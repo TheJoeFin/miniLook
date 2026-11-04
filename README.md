@@ -13,7 +13,70 @@
   </a>
 </p>
 
-a tiny little app to view your Outlook email without spending a sizable chunk of RAM.
+A compact Outlook mail reader in the Windows notification area.
 
-> NOTE: You will need to install .NET 8 Runtime.
-There is currently a conflict with building a Self-Contained package. When that is resolved this requirement will be dropped.
+## What it does
+
+- Click the tray icon to toggle a 400 x 600 mail flyout beside the notification area. It follows the icon's monitor and DPI, uses the taskbar's theme, and dismisses on Escape or a click away. The window stays cached for quick reopening, then closes after one minute hidden. View Focused/Other inboxes, conversations, unread counts, and upcoming calendar events.
+- Read mail, mark it read or unread, archive or delete messages, compose mail, reply, and forward. HTML mail uses WebView2; mail and HTML views can open in separate windows.
+- Keep a local mail cache, initially covering two months, and load older mail on demand.
+- Open the inbox in a separate window. Settings control the app theme, automatic HTML rendering, and cache clearing.
+- Right-click the tray icon for Check mail, Open Outlook, and Exit. Check mail opens the mail flyout.
+
+The mail tray icon and tooltip reflect unread mail in the Focused inbox only; a calendar icon can indicate an imminent event when there is no unread Focused mail. The taskbar badge still counts unread mail in both inboxes. Opening a message and going back preserves the selected Focused/Other view.
+
+## Install
+
+Download miniLook from the [Microsoft Store](https://apps.microsoft.com/detail/9nwqnmp3xsdk?cid=miniLookGitHub).
+
+The current source targets Windows 10 version 2004 or later / Windows 11, on x64 or ARM64. Source-built release packages include the .NET and Windows App SDK runtimes. The Store version may lag the source.
+
+There are no published GitHub releases yet. The release pipeline creates an auto-updating `miniLook.appinstaller` feed. After the first GitHub release is published, download and open [miniLook.appinstaller](https://github.com/TheJoeFin/miniLook/releases/latest/download/miniLook.appinstaller); Windows installs the right version for your PC and keeps it updated. Do not install from a loose package or bundle.
+
+Store and GitHub packages have different identities and separate settings, mail caches, and sign-in data. Neither distribution updates the other.
+
+## Setup and privacy
+
+Sign in with a Microsoft account or work/school account that has an Outlook mailbox. Authentication uses MSAL with the Windows WAM broker, with a system-browser fallback. User tokens use MSAL's Windows-protected cache, `msal_cache.dat`, in the package's local cache folder; tokens are not stored in LocalSettings.
+
+When building from source, copy `miniLook\OAuth.resw.example` to `miniLook\OAuth.resw` and set `ClientId` to your Microsoft identity platform public-client app registration. Configure the broker and localhost browser redirect URIs for that registration. The app requests profile, people, mail, calendar, and mailbox-settings permissions. The resource file is gitignored; never put a confidential-client secret in it.
+
+Mail is cached as `MailCacheJson.json` in the package's local cache folder. Theme, HTML preferences, and mail-sync state are stored in package LocalSettings. The mail cache is ordinary JSON, not encrypted by the app; use Settings to clear it. See [Privacy.md](Privacy.md).
+
+**Current background behavior:** while signed in, miniLook checks Microsoft Graph every 10 seconds, including before the inbox is first opened and after the flyout window is torn down, to update mail and calendar state and the tray indicator. Checks do not overlap; closing the flyout does not stop them, but signing out or choosing Exit does. This background checking keeps the tray indicator current, but is not yet opt-in or governed by the skill's foreground-only poller/backoff policy. Authentication can also contact Microsoft at startup, and displaying HTML mail can load remote content through WebView2. No measured low-idle-memory guarantee is made.
+
+## Build from source
+
+Install the .NET 9 SDK (the repository's `global.json` selects the 9.0 SDK line), the Windows SDK / WinUI build prerequisites, and WinApp CLI 0.7 or later:
+
+```powershell
+winget install Microsoft.WinAppCli
+Copy-Item .\miniLook\OAuth.resw.example .\miniLook\OAuth.resw
+# Set ClientId in miniLook\OAuth.resw before launching.
+# On x64 hosts, replace --arch arm64 with --arch x64.
+winapp run .\miniLook\miniLook.csproj -c Release --arch arm64 -p AppxBundle=Never -p UapAppxPackageBuildMode=SideloadOnly --detach
+```
+
+There is currently no automated test project. `miniLook.Core` targets plain `net9.0`, but most mail and calendar decision logic remains in the WinUI project.
+
+The sideload-only overrides avoid the project's Store-upload/symbols path when running locally. Store-upload builds need Visual Studio's symbols-conversion tooling (`mspdbcmf.exe`); keep those Store settings for actual Store submissions.
+
+Check both release architectures, the bundle, and its embedded App Installer feed without signing or publishing:
+
+```powershell
+.\build-msix-for-gh.ps1 -SkipRelease -NoSign -OutputRoot "$env:TEMP\miniLook-release-check"
+```
+
+For a GitHub release, bump `Identity/@Version` in `miniLook\Package.appxmanifest`, commit and push, then run `.\build-msix-for-gh.ps1` from a PowerShell session with the maintainer's `sign-msix` function available. Publish the resulting draft without changing its tag, then run:
+
+```powershell
+.\build-msix-for-gh.ps1 -VerifyPublished
+```
+
+The script temporarily applies the csproj's GitHub identity and update-feed reference while building, and restores the Store manifest afterward. Do not change either distribution's identity after shipping it. Store builds must not include the GitHub update feed.
+
+The release script is a byte-identical copy of the `winui-tray-app` skill's script. Fix shared release-script bugs in the skill and recopy it rather than editing the repository copy independently.
+
+## License
+
+No license file is currently committed to this repository.
