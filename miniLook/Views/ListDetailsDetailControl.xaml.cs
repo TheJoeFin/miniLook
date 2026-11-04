@@ -54,22 +54,15 @@ public sealed partial class ListDetailsDetailControl : UserControl
         if (d is ListDetailsDetailControl control)
         {
             control._currentHtmlBody = null;
-            control.ForegroundElement.ChangeView(0, 0, 1);
-            control.ResetToggles();
+            control.ResetView();
             await control.TryAutoRenderHtmlAsync();
         }
     }
 
-    private void ResetToggles()
+    private void ResetView()
     {
-        SenderAddressText.Visibility = Visibility.Collapsed;
-        SenderChevron.Glyph = "\uE76C";
-        ToFullText.Visibility = Visibility.Collapsed;
-        ToChevron.Glyph = "\uE76C";
-        CcFullText.Visibility = Visibility.Collapsed;
-        CcChevron.Glyph = "\uE76C";
-        RelativeDateText.Visibility = Visibility.Visible;
-        ExactDateText.Visibility = Visibility.Collapsed;
+        MessageDetailsButton.Flyout.Hide();
+        BodyViewButton.Label = "HTML view";
         WebViewPane.Visibility = Visibility.Collapsed;
         BodyScrollViewer.Visibility = Visibility.Visible;
     }
@@ -91,38 +84,11 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
         BodyScrollViewer.Visibility = Visibility.Collapsed;
         WebViewPane.Visibility = Visibility.Visible;
+        BodyViewButton.Label = "Text view";
         ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
 
         await BodyWebView.EnsureCoreWebView2Async();
         BodyWebView.NavigateToString(ApplyThemeToHtml(_currentHtmlBody));
-    }
-
-    private void SenderButton_Click(object sender, RoutedEventArgs e)
-    {
-        bool isExpanded = SenderAddressText.Visibility == Visibility.Visible;
-        SenderAddressText.Visibility = isExpanded ? Visibility.Collapsed : Visibility.Visible;
-        SenderChevron.Glyph = isExpanded ? "\uE76C" : "\uE70D";
-    }
-
-    private void ToButton_Click(object sender, RoutedEventArgs e)
-    {
-        bool isExpanded = ToFullText.Visibility == Visibility.Visible;
-        ToFullText.Visibility = isExpanded ? Visibility.Collapsed : Visibility.Visible;
-        ToChevron.Glyph = isExpanded ? "\uE76C" : "\uE70D";
-    }
-
-    private void CcButton_Click(object sender, RoutedEventArgs e)
-    {
-        bool isExpanded = CcFullText.Visibility == Visibility.Visible;
-        CcFullText.Visibility = isExpanded ? Visibility.Collapsed : Visibility.Visible;
-        CcChevron.Glyph = isExpanded ? "\uE76C" : "\uE70D";
-    }
-
-    private void DateButton_Click(object sender, RoutedEventArgs e)
-    {
-        bool showingExact = ExactDateText.Visibility == Visibility.Visible;
-        RelativeDateText.Visibility = showingExact ? Visibility.Visible : Visibility.Collapsed;
-        ExactDateText.Visibility = showingExact ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void PopOutButton_Click(object sender, RoutedEventArgs e)
@@ -133,8 +99,16 @@ public sealed partial class ListDetailsDetailControl : UserControl
         ViewModel.PopOutMailItem(ListDetailsMenuItem);
     }
 
-    private async void BrowserLink_Click(object sender, RoutedEventArgs e)
+    private async void BodyViewButton_Click(object sender, RoutedEventArgs e)
     {
+        if (WebViewPane.Visibility == Visibility.Visible)
+        {
+            WebViewPane.Visibility = Visibility.Collapsed;
+            BodyScrollViewer.Visibility = Visibility.Visible;
+            BodyViewButton.Label = "HTML view";
+            return;
+        }
+
         if (ListDetailsMenuItem is null || !ListDetailsMenuItem.HasHtmlBody)
             return;
 
@@ -144,16 +118,11 @@ public sealed partial class ListDetailsDetailControl : UserControl
 
         BodyScrollViewer.Visibility = Visibility.Collapsed;
         WebViewPane.Visibility = Visibility.Visible;
+        BodyViewButton.Label = "Text view";
         ViewModel.MarkMessageIsReadAs(ListDetailsMenuItem, true);
 
         await BodyWebView.EnsureCoreWebView2Async();
         BodyWebView.NavigateToString(ApplyThemeToHtml(_currentHtmlBody));
-    }
-
-    private void BackToTextButton_Click(object sender, RoutedEventArgs e)
-    {
-        WebViewPane.Visibility = Visibility.Collapsed;
-        BodyScrollViewer.Visibility = Visibility.Visible;
     }
 
     private void BodyWebView_CoreWebView2Initialized(WebView2 sender, CoreWebView2InitializedEventArgs args)
