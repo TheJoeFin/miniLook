@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Microsoft.UI.Dispatching;
 
 using miniLook.Contracts.Services;
@@ -9,6 +11,7 @@ public class BackgroundSyncService : IBackgroundSyncService
 {
     private readonly ListDetailsViewModel _viewModel;
     private readonly IGraphService _graphService;
+    private DispatcherQueue? _dispatcherQueue;
     private DispatcherQueueTimer? _timer;
     private bool _started;
 
@@ -23,38 +26,59 @@ public class BackgroundSyncService : IBackgroundSyncService
         if (_started)
             return;
 
-        _started = true;
-
-        DispatcherQueue? dispatcherQueue = DispatcherQueue.GetForCurrentThread();
-        if (dispatcherQueue is null)
-            return;
-
-        _timer = dispatcherQueue.CreateTimer();
+        _dispatcherQueue = DispatcherQueue.GetForCurrentThread()
+            ?? throw new InvalidOperationException("Background mail sync must start on the app dispatcher.");
+        _timer = _dispatcherQueue.CreateTimer();
         _timer.Interval = TimeSpan.FromSeconds(10);
         _timer.Tick += OnTimerTick;
 
         _graphService.AuthenticationStateChanged += OnAuthenticationStateChanged;
-
-        if (_graphService.IsAuthenticated)
-            _timer.Start();
+        _started = true;
+        UpdateAuthenticationState();
     }
 
     public void Stop()
     {
-        _timer?.Stop();
         _started = false;
+        _graphService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        if (_timer is not null)
+        {
+            _timer.Stop();
+            _timer.Tick -= OnTimerTick;
+            _timer = null;
+        }
+        _dispatcherQueue = null;
     }
 
     private void OnAuthenticationStateChanged(object? sender, bool isSignedIn)
     {
-        if (isSignedIn)
-            _timer?.Start();
-        else
-            _timer?.Stop();
+        DispatcherQueue? dispatcherQueue = _dispatcherQueue;
+        if (dispatcherQueue is null)
+            return;
+
+        if (dispatcherQueue.HasThreadAccess)
+            UpdateAuthenticationState();
+        else if (!dispatcherQueue.TryEnqueue(UpdateAuthenticationState))
+            Debug.WriteLine("[Sync] Could not dispatch the authentication state change.");
     }
 
-    private void OnTimerTick(DispatcherQueueTimer sender, object args)
+    private void UpdateAuthenticationState()
     {
-        _viewModel.RunBackgroundSync();
+        if (!_started || _timer is null)
+            return;
+
+        if (_graphService.IsAuthenticated)
+        {
+            _timer.Start();
+            OnTimerTick(_timer, EventArgs.Empty);
+        }
+        else
+            _timer.Stop();
+    }
+
+    private async void OnTimerTick(DispatcherQueueTimer sender, object args)
+    {
+        if (_started && _graphService.IsAuthenticated)
+            await _viewModel.RunBackgroundSyncAsync();
     }
 }

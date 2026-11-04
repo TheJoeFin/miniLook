@@ -85,6 +85,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NavigationService = navigationService;
         MailCacheService = mailCacheService;
         GraphService = graphService;
+        MailItems.CollectionChanged += MailItems_CollectionChanged;
     }
 
     partial void OnDebugTextChanged(string value)
@@ -100,7 +101,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private void MailItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        UpdateItems();
+        if (!IsLoadingContent)
+            UpdateItems();
     }
 
     public void UpdateItems()
@@ -108,8 +110,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
         FocusedUnreadCount = MailItems.Where(m => !m.IsRead && m.IsFocused).Count();
         OtherUnreadCount = MailItems.Where(m => !m.IsRead && !m.IsFocused).Count();
-        if (!IsLoadingContent)
-            RunBackgroundSync();
+        App.SetUnreadMailCounts(NumberUnread, FocusedUnreadCount);
     }
 
     public void RebuildConversationGroups()
@@ -191,29 +192,43 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         IsFocusedView = !IsFocusedView;
     }
 
-    public async void RunBackgroundSync()
+    public async Task RunBackgroundSyncAsync()
     {
-        HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
-
-        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Check new timer tick\n");
-        if (_graphClient is null)
-        {
-            DebugText = DebugText.Insert(0, $"Graph Client is null, returning\n");
-
-            if (HasInternet)
-                _graphClient = GraphService.Client;
-
+        if (IsLoadingContent || isSigningOut || !GraphService.IsAuthenticated)
             return;
-        }
 
-        Debug.WriteLine("Checking for new mail");
-        DebugText = DebugText.Insert(0, $"Checking for new mail\n");
         IsLoadingContent = true;
-        await GetEvents();
-        await SyncMail();
-        await CheckForOlderMailAsync();
+        try
+        {
+            HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
+            _graphClient = GraphService.Client;
+            if (_graphClient is null)
+            {
+                Debug.WriteLine("[Sync] Cannot check mail without an authenticated Graph client.");
+                return;
+            }
 
-        IsLoadingContent = false;
+            Debug.WriteLine("Checking for new mail");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Checking for new mail\n");
+            if (!loadedMail)
+            {
+                await TryToLoadMail(Selected);
+                return;
+            }
+
+            await GetEvents();
+            await SyncMail();
+            await CheckForOlderMailAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Sync] Background sync failed: {ex.Message}");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Background sync failed: {ex.Message}\n");
+        }
+        finally
+        {
+            IsLoadingContent = false;
+        }
     }
 
     public async void OnNavigatedTo(object parameter)
@@ -221,27 +236,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Navigated to ListView Detail Page\n");
         isSigningOut = false;
 
-        // For singleton usage: don't clear data if already loaded (flyout re-open)
-        if (loadedMail && MailItems.Count > 0)
-        {
-            HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
-            return;
-        }
-
-        MailItems.Clear();
-        Events.Clear();
-
-        HasInternet = NetworkHelper.Instance.ConnectionInformation.IsInternetAvailable;
-
-        GraphService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-        GraphService.AuthenticationStateChanged += OnAuthenticationStateChanged;
-
-        MailItems.CollectionChanged -= MailItems_CollectionChanged;
-        MailItems.CollectionChanged += MailItems_CollectionChanged;
-
         Selected = parameter as MailData;
-
-        await TryToLoadMail(Selected);
+        if (!loadedMail)
+            await RunBackgroundSyncAsync();
     }
 
     [RelayCommand]
@@ -257,10 +254,9 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     }
 
     [RelayCommand]
-    private void Refresh()
+    private async Task Refresh()
     {
-        if (!IsLoadingContent)
-            RunBackgroundSync();
+        await RunBackgroundSyncAsync();
     }
 
     public async Task ClearOutContents()
@@ -269,6 +265,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         ConversationGroups.Clear();
         FilteredConversationGroups.Clear();
         Events.Clear();
+        UpdateItems();
         App.SetUpcomingEvents([]);
 
         deltaLink = null;
@@ -439,8 +436,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             return;
 
         listDetailsMenuItem.IsRead = isRead;
-        FocusedUnreadCount = MailItems.Where(m => !m.IsRead && m.IsFocused).Count();
-        OtherUnreadCount = MailItems.Where(m => !m.IsRead && !m.IsFocused).Count();
+        UpdateItems();
 
         _ = _graphClient.Me
             .MailFolders["Inbox"]
@@ -581,40 +577,32 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (loadedMail)
             return;
 
-        loadedMail = true;
-
         DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Trying to load mail\n");
-        if (!GraphService.IsAuthenticated || GraphService.Client is null)
-        {
-            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Not authenticated, triggering sign-in\n");
-            loadedMail = false;
-            await GraphService.SignInAsync();
-            return;
-        }
-
-        IsLoadingContent = true;
-
         await MailCacheService.InitializeAsync();
         mailWindowMonths = MailCacheService.MailWindowMonths;
 
         IEnumerable<MailData> tempMailItems = await MailCacheService.GetEmailsAsync();
 
+        MailItems.Clear();
+        Events.Clear();
         foreach (MailData mail in tempMailItems)
             MailItems.Add(mail);
 
         deltaLink = MailCacheService.DeltaLink;
+        loadedMail = true;
 
         RebuildConversationGroups();
+        UpdateItems();
 
         Selected = selectMailData;
 
         if (!HasInternet)
-        {
-            IsLoadingContent = false;
             return;
-        }
 
         _graphClient = GraphService.Client;
+        if (_graphClient is null)
+            return;
+
         User? me = await _graphClient.Me.GetAsync();
         AccountName = me?.DisplayName ?? string.Empty;
 
@@ -622,7 +610,6 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         await SyncMail();
         await CheckForOlderMailAsync();
 
-        IsLoadingContent = false;
         await MailCacheService.SaveEmailsAsync(MailItems);
     }
 
@@ -792,6 +779,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
                     if (matchingMessage is not null)
                     {
+                        if (message.IsRead is not null)
+                            matchingMessage.IsRead = message.IsRead.Value;
                         if (message.InferenceClassification is not null)
                             matchingMessage.IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
                         updatedCount++;
@@ -864,8 +853,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         {
             isSyncingMail = false;
             LastSync = DateTime.Now;
-            NumberUnread = MailItems.Where(MailItems => MailItems.IsRead == false).Count();
-            App.SetTaskbarBadgeToNumber(NumberUnread);
+            UpdateItems();
             RebuildConversationGroups();
             DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Mail synced\n");
         }
@@ -962,17 +950,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public void OnNavigatedFrom()
     {
-        App.SetTaskbarBadgeToNumber(NumberUnread);
-    }
-
-    private async void OnAuthenticationStateChanged(object? sender, bool isSignedIn)
-    {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Auth state changed to {isSignedIn}\n");
-        if (!isSignedIn)
-            return;
-
-        if (!loadedMail && GraphService.IsAuthenticated)
-            await TryToLoadMail();
+        UpdateItems();
     }
 
     public void ReplyToThisMailItem(MailData? listDetailsMenuItem)

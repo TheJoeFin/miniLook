@@ -266,7 +266,7 @@
         <Grid Grid.Row="0">
 
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="170" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -281,11 +281,9 @@
                 <Grid x:Name="SelectorBarContainer">
                     <SelectorBar
                         x:Name="FocusedOtherSelectorBar"
-                        SelectionChanged="FocusedOtherSelectorBar_SelectionChanged"
                         SizeChanged="FocusedOtherSelectorBar_SizeChanged">
                         <SelectorBarItem
                             x:Name="FocusedSelectorBarItem"
-                            IsSelected="True"
                             Text="Focused" />
                         <SelectorBarItem x:Name="OtherSelectorBarItem" Text="Other" />
                     </SelectorBar>
@@ -313,8 +311,9 @@
                     ToolTipService.ToolTip="No network"
                     Visibility="{x:Bind ViewModel.HasInternet, Mode=OneWay, Converter={StaticResource boolToVisConverter}, ConverterParameter=true}" />
                 <ProgressRing
-                    Width="16"
-                    Height="16"
+                    x:Name="MailSyncProgressRing"
+                    Width="20"
+                    Height="20"
                     Margin="6"
                     VerticalAlignment="Center"
                     IsActive="{x:Bind ViewModel.IsLoadingContent, Mode=OneWay}" />

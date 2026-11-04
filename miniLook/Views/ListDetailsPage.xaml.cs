@@ -18,6 +18,10 @@ public sealed partial class ListDetailsPage : Page
     {
         ViewModel = App.GetService<ListDetailsViewModel>();
         InitializeComponent();
+        FocusedOtherSelectorBar.SelectedItem = ViewModel.IsFocusedView
+            ? FocusedSelectorBarItem
+            : OtherSelectorBarItem;
+        FocusedOtherSelectorBar.SelectionChanged += FocusedOtherSelectorBar_SelectionChanged;
         Loaded += ListDetailsPage_Loaded;
     }
 

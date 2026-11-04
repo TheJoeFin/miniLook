@@ -42,7 +42,7 @@ public partial class App : Application
     private EventWaitHandle? _trayIconRestoreEvent;
     private DispatcherQueueTimer? _restoreEventMonitorTimer;
 
-    private int _lastUnreadCount = 0;
+    private int _lastFocusedUnreadCount = 0;
     private List<Event> _upcomingEvents = [];
 
     public IHost Host { get; }
@@ -299,7 +299,7 @@ public partial class App : Application
         bool isDark = IsSystemInDarkMode();
         string iconUri;
 
-        if (_lastUnreadCount > 0)
+        if (_lastFocusedUnreadCount > 0)
         {
             iconUri = "Assets/email.ico";
         }
@@ -329,10 +329,10 @@ public partial class App : Application
         if (_trayIcon is null)
             return;
 
-        if (_lastUnreadCount > 0)
-            _trayIcon.Tooltip = $"miniLook - {_lastUnreadCount} unread";
+        if (_lastFocusedUnreadCount > 0)
+            _trayIcon.Tooltip = $"miniLook - {_lastFocusedUnreadCount} unread in Focused";
         else
-            _trayIcon.Tooltip = "miniLook - No new mail";
+            _trayIcon.Tooltip = "miniLook - No new mail in Focused";
     }
 
     private static bool IsSystemInDarkMode()
@@ -428,7 +428,7 @@ public partial class App : Application
 
     #region Badge & Tray Sync
 
-    public static void SetTaskbarBadgeToNumber(int number)
+    public static void SetUnreadMailCounts(int totalUnreadCount, int focusedUnreadCount)
     {
         // Update taskbar badge
         XmlDocument badgeXml =
@@ -437,7 +437,7 @@ public partial class App : Application
         if (badgeXml.SelectSingleNode("/badge") is not XmlElement badgeElement)
             return;
 
-        badgeElement.SetAttribute("value", number.ToString());
+        badgeElement.SetAttribute("value", totalUnreadCount.ToString());
 
         BadgeNotification badge = new BadgeNotification(badgeXml);
 
@@ -449,7 +449,7 @@ public partial class App : Application
         // Also update tray icon and tooltip
         if (Current is App app)
         {
-            app._lastUnreadCount = number;
+            app._lastFocusedUnreadCount = focusedUnreadCount;
             _ = app.UpdateTrayIconAsync();
             app.UpdateTrayTooltip();
         }
