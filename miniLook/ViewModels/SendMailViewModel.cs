@@ -7,7 +7,8 @@ using miniLook.Contracts.ViewModels;
 using miniLook.Models;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
+using miniLook.Core.Helpers;
+using miniLook.Helpers;
 
 namespace miniLook.ViewModels;
 
@@ -33,6 +34,19 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     [ObservableProperty]
     private bool canSend = false;
 
+    private string _validationError = string.Empty;
+    public string ValidationError
+    {
+        get => _validationError;
+        set
+        {
+            if (SetProperty(ref _validationError, value))
+                OnPropertyChanged(nameof(HasValidationError));
+        }
+    }
+
+    public bool HasValidationError => !string.IsNullOrEmpty(ValidationError);
+
     INavigationService NavigationService { get; }
 
     IGraphService GraphService { get; }
@@ -41,25 +55,31 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     {
         NavigationService = navigationService;
         GraphService = graphService;
+        EmailAddresses.CollectionChanged += (_, _) => UpdateCanSend();
     }
 
     public ObservableCollection<EmailAddress> SuggestedRecipients { get; set; } = [];
 
     public void TryAddThisClickedItem(string clicked)
     {
-        if (!IsValidEmail(clicked))
+        EmailAddress? email = CreateRecipient(clicked);
+        if (email is null)
             return;
 
         RecipientTextBox = string.Empty;
+        EmailAddresses.Add(email);
+    }
 
-        try
+    public EmailAddress? CreateRecipient(string text)
+    {
+        if (!IsValidEmail(text))
         {
-            EmailAddresses.Add(new EmailAddress { Address = clicked });
+            ValidationError = "Mail_InvalidRecipient".GetLocalized();
+            Debug.WriteLine("[Mail] An invalid recipient address was rejected.");
+            return null;
         }
-        catch (Exception)
-        {
-            Debug.WriteLine($"Failed to add {clicked} to emails");
-        }
+        ValidationError = string.Empty;
+        return new EmailAddress { Address = text.Trim() };
     }
 
     partial void OnRecipientChanged(string value)
@@ -69,31 +89,38 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
 
         foreach (var email in emailsAsStrings)
             if (!IsValidEmail(email))
+            {
+                ValidationError = "Mail_InvalidRecipient".GetLocalized();
+                Debug.WriteLine("[Mail] The recipient list contains an invalid address.");
                 return;
+            }
 
         foreach (var email in emailsAsStrings)
             EmailAddresses.Add(new EmailAddress { Address = email.Trim() });
 
-        CanSend = EmailAddresses.Count > 0 && !string.IsNullOrEmpty(NewBody);
+        ValidationError = string.Empty;
+        UpdateCanSend();
     }
 
     partial void OnNewBodyChanged(string value)
     {
-        CanSend = EmailAddresses.Count > 0 && !string.IsNullOrEmpty(value);
+        UpdateCanSend();
     }
 
-    private static bool IsValidEmail(string? email)
+    private void UpdateCanSend() => CanSend = EmailAddresses.Count > 0 && !string.IsNullOrEmpty(NewBody);
+
+    private static bool IsValidEmail(string? email) => EmailValidation.IsValidAddress(email);
+
+    private bool ValidateRecipients()
     {
-        if (string.IsNullOrWhiteSpace(email))
+        if (EmailAddresses.Any(email => !IsValidEmail(email.Address)))
+        {
+            ValidationError = "Mail_InvalidRecipient".GetLocalized();
+            Debug.WriteLine("[Mail] Sending was blocked by an invalid recipient address.");
             return false;
-
-        string trimmedEmail = email.Trim();
-
-        if (trimmedEmail.EndsWith('.'))
-            return false; // suggested by @TK-421
-
-        Regex emailRegex = EmailRegex();
-        return emailRegex.IsMatch(trimmedEmail);
+        }
+        ValidationError = string.Empty;
+        return true;
     }
 
     [RelayCommand]
@@ -105,9 +132,8 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         if (!CanSend)
             return;
 
-        foreach (EmailAddress email in EmailAddresses)
-            if (!IsValidEmail(email.Address))
-                return;
+        if (!ValidateRecipients())
+            return;
 
         List<Recipient> recipientList = [];
 
@@ -129,22 +155,38 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
             ToRecipients = recipientList,
         };
 
-        if (messageReplyingTo is not null)
-        {
-            await graphClient.Me.Messages[messageReplyingTo.Id].Reply
+        await SendAndCloseAsync(() => messageReplyingTo is not null
+            ? graphClient.Me.Messages[messageReplyingTo.Id].Reply
                 .PostAsync(new Microsoft.Graph.Me.Messages.Item.Reply.ReplyPostRequestBody
                 {
                     Message = message
-                });
-        }
-        else
-        {
-            await graphClient.Me.SendMail
+                })
+            : graphClient.Me.SendMail
                 .PostAsync(new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
                 {
                     Message = message,
                     SaveToSentItems = true
-                });
+                }));
+    }
+
+    /// <summary>Leaves the page only after the send worked. On failure the draft stays open with a reason.</summary>
+    private async Task SendAndCloseAsync(Func<Task> send)
+    {
+        try
+        {
+            await send();
+        }
+        catch (SignInRequiredException)
+        {
+            Debug.WriteLine("[Mail] The message was not sent because the sign-in expired.");
+            ValidationError = "Mail_SendSignInRequired".GetLocalized();
+            return;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Mail] The message could not be sent: {ex.Message}");
+            ValidationError = "Mail_SendFailed".GetLocalized();
+            return;
         }
 
         NavigationService.GoBack();
@@ -156,9 +198,8 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
         if (!CanSend)
             return;
 
-        foreach (EmailAddress email in EmailAddresses)
-            if (!IsValidEmail(email.Address))
-                return;
+        if (!ValidateRecipients())
+            return;
 
         List<Recipient> recipientList = new();
 
@@ -180,21 +221,17 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
             ToRecipients = recipientList,
         };
 
-        await graphClient.Me.SendMail
+        await SendAndCloseAsync(() => graphClient.Me.SendMail
             .PostAsync(new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
             {
                 Message = message,
                 SaveToSentItems = true
-            });
-
-        NavigationService.GoBack();
+            }));
     }
 
 
     public async void OnNavigatedTo(object parameter)
     {
-        await loadSuggestedEmails();
-
         if (parameter is (MailData mailData, MessageActionFlag action))
         {
             switch (action)
@@ -205,7 +242,7 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
                     else
                         NewSubject = $"Re: {mailData.Subject}";
 
-                    EmailAddresses.Add(new EmailAddress { Address = mailData.Sender });
+                    EmailAddresses.Add(new EmailAddress { Address = mailData.SenderAddress, Name = mailData.SenderName });
                     messageReplyingTo = mailData;
                     break;
 
@@ -214,6 +251,15 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
                     NewBody = $"Forwarded message:\n\n{mailData.Body}";
                     break;
             }
+        }
+        try
+        {
+            await loadSuggestedEmails();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Mail] Suggested recipients could not be loaded: {ex.Message}");
+            ValidationError = "Mail_ContactsUnavailable".GetLocalized();
         }
     }
 
@@ -251,6 +297,4 @@ public partial class SendMailViewModel : ObservableRecipient, INavigationAware
     {
     }
 
-    [GeneratedRegex(@"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$")]
-    private static partial Regex EmailRegex();
 }

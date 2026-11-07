@@ -42,7 +42,8 @@ public sealed partial class SendMailPage : Page
 
     private void RecipientTokenizingTextBox_TokenItemAdding(TokenizingTextBox sender, TokenItemAddingEventArgs args)
     {
-        ViewModel.TryAddThisClickedItem(args.TokenText);
+        args.Item = ViewModel.CreateRecipient(args.TokenText);
+        args.Cancel = args.Item is null;
     }
 
     private void RecipientTokenizingTextBox_LostFocus(object sender, RoutedEventArgs e)
@@ -50,8 +51,16 @@ public sealed partial class SendMailPage : Page
         if (sender is not TokenizingTextBox senderTextBox)
             return;
 
-        ViewModel.TryAddThisClickedItem(senderTextBox.Text);
-       //  dispatcherTimer.Start();
+        if (string.IsNullOrWhiteSpace(senderTextBox.Text))
+            return;
+
+        Microsoft.Graph.Models.EmailAddress? email = ViewModel.CreateRecipient(senderTextBox.Text);
+        if (email is not null)
+        {
+            ViewModel.EmailAddresses.Add(email);
+            senderTextBox.Text = string.Empty;
+        }
+        //  dispatcherTimer.Start();
     }
 
     private async void KeyboardAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

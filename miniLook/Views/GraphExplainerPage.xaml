@@ -48,7 +48,15 @@
                     Joe</TextBlock>
             </Grid>
 
+            <InfoBar
+                x:Name="SignInErrorInfoBar"
+                IsClosable="False"
+                IsOpen="{x:Bind ViewModel.HasSignInError, Mode=OneWay}"
+                Message="{x:Bind ViewModel.SignInError, Mode=OneWay}"
+                Severity="Error" />
+
             <Button
+                x:Name="SignInButton"
                 Grid.Row="2"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"

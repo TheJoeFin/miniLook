@@ -29,6 +29,7 @@
             <RowDefinition Height="48" />
             <RowDefinition Height="auto" />
             <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -106,7 +107,7 @@
 
         <TextBox
             x:Name="BodyTextBox"
-            Grid.Row="3"
+            Grid.Row="4"
             VerticalAlignment="Stretch"
             AcceptsReturn="True"
             PlaceholderText="Body..."
@@ -115,5 +116,12 @@
             Text="{x:Bind ViewModel.NewBody, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="Wrap" />
 
+        <InfoBar
+            x:Name="RecipientErrorInfoBar"
+            Grid.Row="3"
+            IsClosable="False"
+            IsOpen="{x:Bind ViewModel.HasValidationError, Mode=OneWay}"
+            Message="{x:Bind ViewModel.ValidationError, Mode=OneWay}"
+            Severity="Error" />
     </Grid>
 </Page>
