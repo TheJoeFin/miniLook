@@ -23,30 +23,13 @@ internal static class WindowPlacementService
     private const uint ABE_LEFT = 0, ABE_TOP = 1, ABE_RIGHT = 2, ABE_BOTTOM = 3;
     private const int WindowMargin = 12;
 
-    private static nint _trayIconWindowHandle;
-    private static uint _trayIconId;
-
     // WinUIEx 2.9.3 keeps the notify-icon HWND private. Preserve that field for
     // trimming, as tray-folder does, so the shell can supply the real icon bounds.
     [DynamicDependency(DynamicallyAccessedMemberTypes.NonPublicFields, typeof(TrayIcon))]
-    public static void SetTrayIcon(TrayIcon trayIcon)
-    {
-        _trayIconId = trayIcon.TrayIconId;
-        FieldInfo? field = typeof(TrayIcon).GetField("_windowHandle", BindingFlags.Instance | BindingFlags.NonPublic);
-        _trayIconWindowHandle = field?.GetValue(trayIcon) switch
-        {
-            nint handle => handle,
-            object boxed => ReadHandle(boxed),
-            _ => 0,
-        };
-        if (_trayIconWindowHandle == 0)
-            Debug.WriteLine("Tray icon window handle is unavailable; placement will fall back to the cursor.");
-    }
-
-    public static void PositionNearTray(Window window, int width, int height)
+    public static void PositionNearTray(Window window, int width, int height, TrayIcon trayIcon)
     {
         PointInt32 anchor;
-        if (TryGetTrayIconRect(out RECT iconRect))
+        if (TryGetTrayIconRect(trayIcon, out RECT iconRect))
         {
             anchor = new((iconRect.left + iconRect.right) / 2, (iconRect.top + iconRect.bottom) / 2);
         }
@@ -101,17 +84,24 @@ internal static class WindowPlacementService
         window.AppWindow.MoveAndResize(new RectInt32(x, y, w, h));
     }
 
-    private static bool TryGetTrayIconRect(out RECT rect)
+    private static bool TryGetTrayIconRect(TrayIcon trayIcon, out RECT rect)
     {
         rect = default;
-        if (_trayIconWindowHandle == 0)
+        FieldInfo? field = typeof(TrayIcon).GetField("_windowHandle", BindingFlags.Instance | BindingFlags.NonPublic);
+        nint windowHandle = field?.GetValue(trayIcon) switch
+        {
+            nint handle => handle,
+            object boxed => ReadHandle(boxed),
+            _ => 0,
+        };
+        if (windowHandle == 0)
             return false;
 
         NOTIFYICONIDENTIFIER id = new()
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONIDENTIFIER>(),
-            hWnd = (HWND)_trayIconWindowHandle,
-            uID = _trayIconId,
+            hWnd = (HWND)windowHandle,
+            uID = trayIcon.TrayIconId,
         };
         return PInvoke.Shell_NotifyIconGetRect(in id, out rect).Succeeded
             && rect.right > rect.left && rect.bottom > rect.top;

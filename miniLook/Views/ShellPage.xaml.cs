@@ -5,7 +5,7 @@ using miniLook.ViewModels;
 
 namespace miniLook.Views;
 
-public sealed partial class ShellPage : Page
+public sealed partial class ShellPage : Page, ITrayFlyoutPage
 {
     public ShellViewModel ViewModel { get; }
 

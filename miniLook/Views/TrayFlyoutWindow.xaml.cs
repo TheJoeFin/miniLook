@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 
 using miniLook.Controls;
@@ -34,7 +35,9 @@ public sealed partial class TrayFlyoutWindow : WindowEx
     private static readonly TimeSpan RecentDismissWindow = TimeSpan.FromMilliseconds(300);
 
     private readonly HWND _hwnd;
-    private readonly ShellPage _page;
+    private readonly Page _page;
+    private readonly ITrayFlyoutPage _lifecycle;
+    private readonly TrayIcon _trayIcon;
     private readonly ShellBackdrop _backdrop = new();
     private readonly UISettings _uiSettings = new();
     private readonly DispatcherQueueTimer _hideTimer;
@@ -58,15 +61,21 @@ public sealed partial class TrayFlyoutWindow : WindowEx
     private int _currentOffset;
     private double _currentOpacity;
 
-    public TrayFlyoutWindow(ShellPage page)
+    public TrayFlyoutWindow(Page page, TrayIcon trayIcon, string iconPath, string title)
     {
+        if (page is not ITrayFlyoutPage lifecycle)
+            throw new ArgumentException("The flyout page must implement ITrayFlyoutPage.", nameof(page));
+
         _page = page;
+        _lifecycle = lifecycle;
+        _trayIcon = trayIcon;
         InitializeComponent();
+        Title = title;
         _hwnd = (HWND)WindowNative.GetWindowHandle(this);
         PageHost.Content = page;
         SystemBackdrop = _backdrop;
         ApplyShellTheme();
-        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "mouseIcon.ico"));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, iconPath));
         ConfigureWindowChrome();
 
         Activated += OnWindowActivated;
@@ -111,7 +120,7 @@ public sealed partial class TrayFlyoutWindow : WindowEx
 
     public void ShowPopup()
     {
-        WindowPlacementService.PositionNearTray(this, PopupWidth, PopupHeight);
+        WindowPlacementService.PositionNearTray(this, PopupWidth, PopupHeight, _trayIcon);
         _baseX = AppWindow.Position.X;
         _baseY = AppWindow.Position.Y;
         _hideTimer.Stop();
@@ -127,7 +136,7 @@ public sealed partial class TrayFlyoutWindow : WindowEx
         Activate();
         if (!PInvoke.SetForegroundWindow(_hwnd))
             Debug.WriteLine("Windows did not grant foreground activation to the tray flyout.");
-        _page.OnShown();
+        _lifecycle.OnShown();
         App.NotifyWindowVisibilityChanged();
     }
 
@@ -141,7 +150,7 @@ public sealed partial class TrayFlyoutWindow : WindowEx
         _isPopupVisible = false;
         _lastDismissedAtUtc = DateTime.UtcNow;
         _uiSettings.ColorValuesChanged -= OnColorValuesChanged;
-        _page.OnHidden();
+        _lifecycle.OnHidden();
         App.NotifyWindowVisibilityChanged();
         PlayHideAnimation();
         _closeTimer.Stop();
@@ -158,9 +167,9 @@ public sealed partial class TrayFlyoutWindow : WindowEx
         _closeTimer.Stop();
         _animationTimer.Stop();
         if (_isPopupVisible)
-            _page.OnHidden();
+            _lifecycle.OnHidden();
         _isPopupVisible = false;
-        _page.OnClosed();
+        _lifecycle.OnClosed();
         PageHost.Content = null;
         _uiSettings.ColorValuesChanged -= OnColorValuesChanged;
         Activated -= OnWindowActivated;

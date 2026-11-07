@@ -22,7 +22,6 @@ using miniLook.ViewModels;
 using miniLook.Views;
 
 using Windows.Data.Xml.Dom;
-using Windows.UI;
 using Windows.UI.Notifications;
 using Windows.UI.ViewManagement;
 
@@ -37,7 +36,10 @@ namespace miniLook;
 public partial class App : Application
 {
     private TrayIcon? _trayIcon;
+    private TrayIcon? _calendarTrayIcon;
     private TrayFlyoutWindow? _flyoutWindow;
+    private TrayFlyoutWindow? _calendarFlyoutWindow;
+    private CalendarPage? _calendarPage;
     private readonly UISettings _uiSettings = new();
     private Mutex? _singleInstanceMutex;
     private EventWaitHandle? _trayIconRestoreEvent;
@@ -116,6 +118,8 @@ public partial class App : Application
             services.AddTransient<WelcomePage>();
             services.AddTransient<SettingsViewModel>();
             services.AddTransient<SettingsPage>();
+            services.AddTransient<CalendarViewModel>();
+            services.AddTransient<CalendarPage>();
             services.AddSingleton<ListDetailsViewModel>();
             services.AddTransient<ListDetailsPage>();
             services.AddTransient<ShellViewModel>();
@@ -175,8 +179,8 @@ public partial class App : Application
         {
         }
 
-        // Initialize tray icon
-        InitializeTrayIcon();
+        // Initialize tray icons.
+        InitializeTrayIcons();
 
         base.OnLaunched(args);
 
@@ -187,6 +191,7 @@ public partial class App : Application
 
         await UpdateTrayIconAsync();
         UpdateTrayTooltip();
+        UpdateCalendarTrayTooltip();
         StartRestoreEventMonitor();
 
         await GetService<IBackgroundSyncService>().StartAsync();
@@ -194,13 +199,32 @@ public partial class App : Application
 
     #region Tray Icon
 
-    private void InitializeTrayIcon()
+    private void InitializeTrayIcons()
     {
+        InitializeMailTrayIcon();
+        InitializeCalendarTrayIcon();
+    }
+
+    private void InitializeMailTrayIcon()
+    {
+        if (_trayIcon is not null)
+            return;
+
         _trayIcon = new TrayIcon(0, "Assets/mouseIcon.ico", "miniLook");
         _trayIcon.Selected += TrayIcon_Selected;
         _trayIcon.ContextMenu += TrayIcon_ContextMenu;
         _trayIcon.IsVisible = true;
-        WindowPlacementService.SetTrayIcon(_trayIcon);
+    }
+
+    private void InitializeCalendarTrayIcon()
+    {
+        if (_calendarTrayIcon is not null)
+            return;
+
+        _calendarTrayIcon = new TrayIcon(1, "Assets/Calendar.ico", "miniLook Calendar");
+        _calendarTrayIcon.Selected += CalendarTrayIcon_Selected;
+        _calendarTrayIcon.ContextMenu += CalendarTrayIcon_ContextMenu;
+        _calendarTrayIcon.IsVisible = true;
     }
 
     private void TrayIcon_Selected(TrayIcon sender, TrayIconEventArgs args)
@@ -213,11 +237,25 @@ public partial class App : Application
         args.Flyout = CreateContextMenu();
     }
 
+    private void CalendarTrayIcon_Selected(TrayIcon sender, TrayIconEventArgs args)
+    {
+        EnsureCalendarFlyout().Toggle();
+    }
+
+    private void CalendarTrayIcon_ContextMenu(TrayIcon sender, TrayIconEventArgs args)
+    {
+        args.Flyout = CreateCalendarContextMenu();
+    }
+
     private TrayFlyoutWindow EnsureFlyout()
     {
-        if (_flyoutWindow is null)
+        if (_flyoutWindow is null && _trayIcon is not null)
         {
-            _flyoutWindow = new TrayFlyoutWindow(GetService<ShellPage>());
+            _flyoutWindow = new TrayFlyoutWindow(
+                GetService<ShellPage>(),
+                _trayIcon,
+                "Assets/mouseIcon.ico",
+                "miniLook");
             _flyoutWindow.Closed += (_, _) =>
             {
                 _flyoutWindow = null;
@@ -225,7 +263,7 @@ public partial class App : Application
             };
         }
 
-        return _flyoutWindow;
+        return _flyoutWindow ?? throw new InvalidOperationException("The mail tray icon is unavailable.");
     }
 
     private void ShowFlyout()
@@ -273,6 +311,87 @@ public partial class App : Application
         return flyout;
     }
 
+    private TrayFlyoutWindow EnsureCalendarFlyout()
+    {
+        if (_calendarFlyoutWindow is null && _calendarTrayIcon is not null)
+        {
+            _calendarPage = GetService<CalendarPage>();
+            _calendarFlyoutWindow = new TrayFlyoutWindow(
+                _calendarPage,
+                _calendarTrayIcon,
+                "Assets/Calendar.ico",
+                "miniLook Calendar");
+            _calendarFlyoutWindow.Closed += (_, _) =>
+            {
+                _calendarFlyoutWindow = null;
+                _calendarPage = null;
+                NotifyWindowVisibilityChanged();
+            };
+        }
+
+        return _calendarFlyoutWindow
+            ?? throw new InvalidOperationException("The calendar tray icon is unavailable.");
+    }
+
+    private void ShowCalendarFlyout()
+    {
+        EnsureCalendarFlyout().ShowPopup();
+    }
+
+    private void CreateCalendarEvent()
+    {
+        EnsureCalendarFlyout();
+        _calendarPage?.StartNewEvent();
+        ShowCalendarFlyout();
+    }
+
+    private MenuFlyout CreateCalendarContextMenu()
+    {
+        MenuFlyoutItem openItem = new()
+        {
+            Text = "Open calendar",
+            Icon = new FontIcon { Glyph = "\uE787" },
+        };
+        openItem.Click += (_, _) => ShowCalendarFlyout();
+
+        MenuFlyoutItem createItem = new()
+        {
+            Text = "New event",
+            Icon = new FontIcon { Glyph = "\uE710" },
+        };
+        createItem.Click += (_, _) => CreateCalendarEvent();
+
+        MenuFlyoutItem outlookItem = new()
+        {
+            Text = "Open Outlook calendar",
+            Icon = new FontIcon { Glyph = "\uE774" },
+        };
+        outlookItem.Click += (_, _) =>
+        {
+            _ = Windows.System.Launcher.LaunchUriAsync(
+                new Uri("https://outlook.live.com/calendar/0/view/month"));
+        };
+
+        MenuFlyoutItem exitItem = new()
+        {
+            Text = "Exit",
+            Icon = new FontIcon { Glyph = "\uE8BB" },
+        };
+        exitItem.Click += async (_, _) => await ExitApplicationAsync();
+
+        return new MenuFlyout
+        {
+            Items =
+            {
+                openItem,
+                createItem,
+                outlookItem,
+                new MenuFlyoutSeparator(),
+                exitItem,
+            }
+        };
+    }
+
     private static XamlUICommand? FindCommand(string key)
     {
         if (Current.Resources.TryGetValue(key, out object? resource) && resource is XamlUICommand cmd)
@@ -289,6 +408,7 @@ public partial class App : Application
         _uiSettings.ColorValuesChanged -= OnColorValuesChanged;
         _restoreEventMonitorTimer?.Stop();
         _flyoutWindow?.CloseWindow();
+        _calendarFlyoutWindow?.CloseWindow();
         PopOutWindow?.Close();
         foreach (MailItemWindow window in MailItemWindows.Values.ToArray())
             window.Close();
@@ -296,15 +416,20 @@ public partial class App : Application
             window.Close();
         _trayIcon?.Dispose();
         _trayIcon = null;
+        _calendarTrayIcon?.Dispose();
+        _calendarTrayIcon = null;
         _trayIconRestoreEvent?.Dispose();
         _singleInstanceMutex?.Dispose();
         MainWindow.Close();
         Exit();
     }
 
-    public static bool HasVisibleWindows => Current is App app
+    public static bool HasVisibleMailWindows => Current is App app
         && (app._flyoutWindow?.IsPopupVisible == true || IsVisible(PopOutWindow)
             || MailItemWindows.Values.Any(IsVisible) || HtmlViewWindows.Values.Any(IsVisible));
+
+    public static bool HasVisibleWindows => Current is App app
+        && (HasVisibleMailWindows || app._calendarFlyoutWindow?.IsPopupVisible == true);
 
     private static bool IsVisible(Window? window) => window is not null && window.AppWindow.IsVisible
         && (window.AppWindow.Presenter is not OverlappedPresenter presenter
@@ -315,11 +440,12 @@ public partial class App : Application
         if (Current is not App app)
             return;
 
-        bool visible = HasVisibleWindows;
-        GetService<IBackgroundSyncService>().SetForegroundActive(visible);
+        GetService<IBackgroundSyncService>().SetForegroundActive(HasVisibleMailWindows);
         app._idleMemoryTimer?.Stop();
         app._idleMemoryCancellation?.Cancel();
-        if (visible || app._flyoutWindow is not null)
+        if (HasVisibleWindows
+            || app._flyoutWindow is not null
+            || app._calendarFlyoutWindow is not null)
             return;
 
         app._idleMemoryCancellation?.Dispose();
@@ -331,7 +457,10 @@ public partial class App : Application
             app._idleMemoryTimer.Interval = TimeSpan.FromSeconds(5);
             app._idleMemoryTimer.Tick += (_, _) =>
             {
-                if (!HasVisibleWindows && app._flyoutWindow is null && app._idleMemoryCancellation is not null)
+                if (!HasVisibleWindows
+                    && app._flyoutWindow is null
+                    && app._calendarFlyoutWindow is null
+                    && app._idleMemoryCancellation is not null)
                     MemoryService.ReleaseIdle(app._idleMemoryCancellation.Token);
             };
         }
@@ -349,18 +478,9 @@ public partial class App : Application
 
         string iconUri;
 
-        if (_lastFocusedUnreadCount > 0)
-        {
-            iconUri = "Assets/email.ico";
-        }
-        else if (HasImminentEvent())
-        {
-            iconUri = "Assets/Calendar.ico";
-        }
-        else
-        {
-            iconUri = "Assets/mouseIcon.ico";
-        }
+        iconUri = _lastFocusedUnreadCount > 0
+            ? "Assets/email.ico"
+            : "Assets/mouseIcon.ico";
 
         try
         {
@@ -389,40 +509,61 @@ public partial class App : Application
             _trayIcon.Tooltip = "miniLook - No new mail in Focused";
     }
 
-    private static bool IsSystemInDarkMode()
+    private void UpdateCalendarTrayTooltip()
     {
-        try
+        if (_calendarTrayIcon is null)
+            return;
+
+        DateTimeOffset now = DateTimeOffset.Now;
+        Event? next = _upcomingEvents
+            .Where(item => TryGetEventTime(item, now, out _, out _))
+            .OrderBy(item =>
+            {
+                TryGetEventTime(item, now, out DateTimeOffset start, out _);
+                return start;
+            })
+            .FirstOrDefault();
+
+        if (next is null
+            || !TryGetEventTime(next, now, out DateTimeOffset nextStart, out DateTimeOffset nextEnd))
         {
-            UISettings uiSettings = new();
-            Color foregroundColor = uiSettings.GetColorValue(UIColorType.Foreground);
-            return (foregroundColor.R + foregroundColor.G + foregroundColor.B) > 384;
+            _calendarTrayIcon.Tooltip = "miniLook Calendar - no upcoming events";
+            return;
         }
-        catch
+
+        string subject = string.IsNullOrWhiteSpace(next.Subject) ? "Untitled event" : next.Subject;
+        if (subject.Length > 48)
+            subject = $"{subject[..45]}...";
+
+        if (now >= nextStart && now < nextEnd)
         {
-            return true;
+            _calendarTrayIcon.Tooltip = $"miniLook Calendar - now: {subject}";
+            return;
         }
+
+        string when = next.IsAllDay is true
+            ? nextStart.ToString("ddd, MMM d")
+            : nextStart.Date == now.Date
+                ? nextStart.ToString("h:mm tt")
+                : nextStart.ToString("ddd h:mm tt");
+        _calendarTrayIcon.Tooltip = $"miniLook Calendar - {when}: {subject}";
     }
 
-    private bool HasImminentEvent()
+    private static bool TryGetEventTime(
+        Event calendarEvent,
+        DateTimeOffset now,
+        out DateTimeOffset start,
+        out DateTimeOffset end)
     {
-        DateTimeOffset now = DateTimeOffset.Now;
+        start = default;
+        end = default;
+        if (!DateTimeOffset.TryParse(calendarEvent.Start?.DateTime, out DateTimeOffset parsedStart)
+            || !DateTimeOffset.TryParse(calendarEvent.End?.DateTime, out DateTimeOffset parsedEnd))
+            return false;
 
-        return _upcomingEvents.Any(ev =>
-        {
-            if (ev.IsAllDay is true)
-                return false;
-
-            if (!DateTimeOffset.TryParse(ev.Start?.DateTime, out DateTimeOffset start)
-                || !DateTimeOffset.TryParse(ev.End?.DateTime, out DateTimeOffset end))
-                return false;
-
-            // Skip multi-day events (spans more than 24 hours)
-            if ((end - start).TotalHours >= 24)
-                return false;
-
-            TimeSpan untilStart = start - now;
-            return untilStart > TimeSpan.Zero && untilStart <= TimeSpan.FromMinutes(10);
-        });
+        start = parsedStart.ToLocalTime();
+        end = parsedEnd.ToLocalTime();
+        return end > now || start > now;
     }
 
     private void OnColorValuesChanged(UISettings sender, object args)
@@ -467,11 +608,16 @@ public partial class App : Application
         try
         {
             if (_trayIcon is null)
-                InitializeTrayIcon();
+                InitializeMailTrayIcon();
             else
                 _trayIcon.IsVisible = true;
+            if (_calendarTrayIcon is null)
+                InitializeCalendarTrayIcon();
+            else
+                _calendarTrayIcon.IsVisible = true;
             await UpdateTrayIconAsync();
             UpdateTrayTooltip();
+            UpdateCalendarTrayTooltip();
             ShowFlyout();
         }
         catch
@@ -521,7 +667,7 @@ public partial class App : Application
         if (Current is App app)
         {
             app._upcomingEvents = events.ToList();
-            _ = app.UpdateTrayIconAsync();
+            app.UpdateCalendarTrayTooltip();
         }
     }
 
