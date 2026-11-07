@@ -28,18 +28,43 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <FontIcon
-                VerticalAlignment="Center"
-                FontSize="20"
-                Glyph="&#xE787;" />
+            <Grid>
+                <Button
+                    Width="40"
+                    Height="40"
+                    AutomationProperties.Name="Back to calendar"
+                    Command="{x:Bind ViewModel.CancelEditCommand}"
+                    IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolNegation}}"
+                    Style="{StaticResource NavigationBackButtonNormalStyle}"
+                    Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="Escape" />
+                        <KeyboardAccelerator Key="Left" Modifiers="Menu" />
+                    </Button.KeyboardAccelerators>
+                </Button>
+                <Grid
+                    Width="20"
+                    Height="20"
+                    VerticalAlignment="Center"
+                    Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibility}, ConverterParameter=True}">
+                    <FontIcon
+                        FontSize="20"
+                        Glyph="&#xE787;"
+                        Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibility}, ConverterParameter=True}" />
+                    <ProgressRing
+                        Width="20"
+                        Height="20"
+                        IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+                </Grid>
+            </Grid>
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock
                     Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="Calendar" />
+                    Text="{x:Bind ViewModel.HeaderTitle, Mode=OneWay}" />
                 <TextBlock
                     Style="{ThemeResource CaptionTextBlockStyle}"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Text="Next 30 days" />
+                    Text="{x:Bind ViewModel.HeaderSubtitle, Mode=OneWay}" />
             </StackPanel>
             <Button
                 Grid.Column="2"
@@ -51,7 +76,8 @@
                 BorderThickness="0"
                 Command="{x:Bind ViewModel.RefreshCommand}"
                 IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolNegation}}"
-                ToolTipService.ToolTip="Refresh calendar">
+                ToolTipService.ToolTip="Refresh calendar"
+                Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibility}, ConverterParameter=True}">
                 <FontIcon FontSize="14" Glyph="&#xE72C;" />
             </Button>
             <Button
@@ -60,7 +86,8 @@
                 AutomationProperties.Name="Create event"
                 Click="NewEventButton_Click"
                 IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolNegation}}"
-                Style="{ThemeResource AccentButtonStyle}">
+                Style="{ThemeResource AccentButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibility}, ConverterParameter=True}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <FontIcon FontSize="14" Glyph="&#xE710;" />
                     <TextBlock Text="New" />
@@ -84,18 +111,27 @@
 
         <Grid Grid.Row="2">
             <Grid Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibility}, ConverterParameter=True}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
                 <Grid>
                     <ListView
+                        Margin="0,0,-12,0"
+                        Padding="0,0,12,0"
                         AutomationProperties.Name="Upcoming events"
                         IsItemClickEnabled="True"
                         ItemClick="CalendarList_ItemClick"
-                        ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}"
+                        ItemsSource="{x:Bind GroupedEvents.View, Mode=OneWay}"
                         SelectionMode="None">
+                        <ListView.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate x:DataType="models:CalendarEventDayGroup">
+                                        <TextBlock
+                                            Margin="0,12,0,2"
+                                            Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                            Text="{x:Bind Label, Mode=OneTime}" />
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ListView.GroupStyle>
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="Padding" Value="0" />
@@ -107,7 +143,7 @@
                             <DataTemplate x:DataType="models:CalendarEventItem">
                                 <Border
                                     Padding="12"
-                                    AutomationProperties.Name="{x:Bind AccessibilityLabel, Mode=OneTime}"
+                                    AutomationProperties.Name="{x:Bind AccessibilityLabel, Mode=OneWay}"
                                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
@@ -120,19 +156,8 @@
                                         <StackPanel Spacing="4">
                                             <TextBlock
                                                 Style="{ThemeResource BodyStrongTextBlockStyle}"
-                                                Text="{x:Bind Subject, Mode=OneTime}"
+                                                Text="{x:Bind Subject, Mode=OneWay}"
                                                 TextTrimming="CharacterEllipsis" />
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon
-                                                    VerticalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Glyph="&#xE787;" />
-                                                <TextBlock
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Style="{ThemeResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind DisplayDate, Mode=OneTime}" />
-                                            </StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon
                                                     VerticalAlignment="Center"
@@ -142,12 +167,12 @@
                                                 <TextBlock
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                     Style="{ThemeResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind DisplayTime, Mode=OneTime}" />
+                                                    Text="{x:Bind DisplayTime, Mode=OneWay}" />
                                             </StackPanel>
                                             <StackPanel
                                                 Orientation="Horizontal"
                                                 Spacing="6"
-                                                Visibility="{x:Bind HasLocation, Mode=OneTime, Converter={StaticResource BoolToVisibility}}">
+                                                Visibility="{x:Bind HasLocation, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                                                 <FontIcon
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
@@ -156,40 +181,23 @@
                                                 <TextBlock
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                     Style="{ThemeResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind Location, Mode=OneTime}"
+                                                    Text="{x:Bind Location, Mode=OneWay}"
                                                     TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </StackPanel>
-                                        <StackPanel
+                                        <HyperlinkButton
                                             Grid.Column="1"
                                             VerticalAlignment="Top"
-                                            Orientation="Horizontal"
-                                            Spacing="2">
-                                            <Button
-                                                Width="32"
-                                                Height="32"
-                                                Padding="0"
-                                                AutomationProperties.Name="Open event in Outlook"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Click="OpenEventButton_Click"
-                                                Tag="{x:Bind WebLink, Mode=OneTime}"
-                                                ToolTipService.ToolTip="Open in Outlook">
-                                                <FontIcon FontSize="14" Glyph="&#xE774;" />
-                                            </Button>
-                                            <Button
-                                                Width="32"
-                                                Height="32"
-                                                Padding="0"
-                                                AutomationProperties.Name="Delete event"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Click="DeleteEventButton_Click"
-                                                Tag="{x:Bind Mode=OneTime}"
-                                                ToolTipService.ToolTip="Delete event">
-                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                            </Button>
-                                        </StackPanel>
+                                            AutomationProperties.Name="Join meeting"
+                                            Click="OpenMeetingButton_Click"
+                                            Tag="{x:Bind MeetingLink, Mode=OneWay}"
+                                            ToolTipService.ToolTip="Join meeting"
+                                            Visibility="{x:Bind HasMeetingLink, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon FontSize="14" Glyph="&#xE714;" />
+                                                <TextBlock Text="Join" />
+                                            </StackPanel>
+                                        </HyperlinkButton>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -215,20 +223,7 @@
                             TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <ProgressRing
-                        Width="28"
-                        Height="28"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
                 </Grid>
-
-                <TextBlock
-                    Grid.Row="1"
-                    Margin="0,8,0,0"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{ThemeResource CaptionTextBlockStyle}"
-                    Text="Select an event to edit it." />
             </Grid>
 
             <Grid Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
@@ -237,7 +232,10 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer
+                    Margin="0,0,-12,0"
+                    Padding="0,0,12,0"
+                    VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="12">
                         <TextBlock
                             Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -312,11 +310,6 @@
                         Visibility="{x:Bind ViewModel.IsExistingEvent, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                         <FontIcon Glyph="&#xE74D;" />
                     </Button>
-                    <Button
-                        Grid.Column="2"
-                        Command="{x:Bind ViewModel.CancelEditCommand}"
-                        Content="Cancel"
-                        IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolNegation}}" />
                     <Button
                         Grid.Column="3"
                         Command="{x:Bind ViewModel.SaveCommand}"

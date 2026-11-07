@@ -20,23 +20,30 @@ public sealed partial class CalendarViewModel : ObservableObject
     private static readonly TimeSpan QueryFuture = TimeSpan.FromDays(30);
 
     private readonly IGraphService _graphService;
+    private readonly ICalendarCacheService _calendarCacheService;
     private CancellationTokenSource? _operationCancellation;
     private bool _isShown;
+    private bool _hasLoadedCache;
     private string? _editingEventId;
     private CalendarEventItem? _editingEvent;
 
     public ObservableCollection<CalendarEventItem> Events { get; } = [];
+
+    public ObservableCollection<CalendarEventDayGroup> EventGroups { get; } = [];
 
     [ObservableProperty]
     private bool isBusy;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsExistingEvent))]
+    [NotifyPropertyChangedFor(nameof(HeaderTitle))]
+    [NotifyPropertyChangedFor(nameof(HeaderSubtitle))]
     private bool isEditing;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsExistingEvent))]
     [NotifyPropertyChangedFor(nameof(EditorTitle))]
+    [NotifyPropertyChangedFor(nameof(HeaderTitle))]
     private bool isNewEvent;
 
     [ObservableProperty]
@@ -79,9 +86,14 @@ public sealed partial class CalendarViewModel : ObservableObject
 
     public string EditorTitle => IsNewEvent ? "New event" : "Edit event";
 
-    public CalendarViewModel(IGraphService graphService)
+    public string HeaderTitle => IsEditing ? EditorTitle : "Calendar";
+
+    public string HeaderSubtitle => IsEditing ? "Calendar" : "Next 30 days";
+
+    public CalendarViewModel(IGraphService graphService, ICalendarCacheService calendarCacheService)
     {
         _graphService = graphService;
+        _calendarCacheService = calendarCacheService;
     }
 
     public void OnShown()
@@ -226,6 +238,7 @@ public sealed partial class CalendarViewModel : ObservableObject
 
         try
         {
+            await LoadCachedEventsAsync(cancellationToken);
             await LoadEventsAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -251,6 +264,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         if (!_graphService.IsAuthenticated)
         {
             Events.Clear();
+            EventGroups.Clear();
             HasEvents = false;
             NeedsSignIn = true;
             ErrorMessage = "Sign in to view and manage your calendar.";
@@ -269,7 +283,18 @@ public sealed partial class CalendarViewModel : ObservableObject
             config.QueryParameters.EndDateTime = (now + QueryFuture).UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
             config.QueryParameters.Orderby = ["start/dateTime"];
             config.QueryParameters.Select =
-                ["id", "subject", "start", "end", "isAllDay", "location", "body", "bodyPreview", "webLink"];
+                [
+                    "id",
+                    "subject",
+                    "start",
+                    "end",
+                    "isAllDay",
+                    "location",
+                    "body",
+                    "bodyPreview",
+                    "webLink",
+                    "onlineMeetingUrl",
+                ];
             config.QueryParameters.Top = 100;
             config.Headers.Add("Prefer", $"outlook.timezone=\"{TimeZoneInfo.Local.Id}\"");
         }, cancellationToken: cancellationToken);
@@ -295,12 +320,103 @@ public sealed partial class CalendarViewModel : ObservableObject
             .Select(CreateCalendarItem)
             .ToList();
 
-        Events.Clear();
-        foreach (CalendarEventItem item in items)
-            Events.Add(item);
-        HasEvents = Events.Count > 0;
+        ReconcileEvents(items);
 
         App.SetUpcomingEvents(graphEvents);
+        try
+        {
+            await _calendarCacheService.SaveEventsAsync(items, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Cache] Could not save calendar events: {ex.Message}");
+        }
+    }
+
+    private async Task LoadCachedEventsAsync(CancellationToken cancellationToken)
+    {
+        if (_hasLoadedCache)
+            return;
+
+        if (!_graphService.IsAuthenticated || Events.Count > 0)
+            return;
+
+        try
+        {
+            IReadOnlyList<CalendarEventItem> cachedEvents =
+                await _calendarCacheService.GetEventsAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            ReconcileEvents(cachedEvents);
+            _hasLoadedCache = true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Cache] Could not load cached calendar events: {ex.Message}");
+        }
+    }
+
+    private void ReconcileEvents(IReadOnlyList<CalendarEventItem> items)
+    {
+        HashSet<string> retainedIds = items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        for (int index = Events.Count - 1; index >= 0; index--)
+        {
+            if (!retainedIds.Contains(Events[index].Id))
+                Events.RemoveAt(index);
+        }
+
+        for (int targetIndex = 0; targetIndex < items.Count; targetIndex++)
+        {
+            CalendarEventItem updated = items[targetIndex];
+            if (targetIndex < Events.Count && Events[targetIndex].Id == updated.Id)
+            {
+                Events[targetIndex].UpdateFrom(updated);
+                continue;
+            }
+
+            int existingIndex = -1;
+            for (int index = targetIndex; index < Events.Count; index++)
+            {
+                if (Events[index].Id == updated.Id)
+                {
+                    existingIndex = index;
+                    break;
+                }
+            }
+
+            if (existingIndex >= 0)
+            {
+                Events.Move(existingIndex, targetIndex);
+                Events[targetIndex].UpdateFrom(updated);
+            }
+            else
+            {
+                Events.Insert(targetIndex, updated);
+            }
+        }
+
+        HasEvents = Events.Count > 0;
+        RebuildEventGroups();
+    }
+
+    private void RebuildEventGroups()
+    {
+        EventGroups.Clear();
+        DateTime today = DateTime.Today;
+        foreach (IGrouping<DateTime, CalendarEventItem> group in Events
+                     .OrderBy(item => item.Start)
+                     .ThenBy(item => item.Subject, StringComparer.Ordinal)
+                     .GroupBy(item => item.Start.Date))
+        {
+            EventGroups.Add(new CalendarEventDayGroup(group.Key, group, today));
+        }
     }
 
     private async Task SaveEventAsync()
@@ -408,6 +524,11 @@ public sealed partial class CalendarViewModel : ObservableObject
             Location = graphEvent.Location?.DisplayName ?? string.Empty,
             Body = graphEvent.Body?.Content ?? graphEvent.BodyPreview ?? string.Empty,
             WebLink = string.IsNullOrWhiteSpace(graphEvent.WebLink) ? null : graphEvent.WebLink,
+            MeetingLink = CalendarEventPolicy.GetMeetingLink(
+                graphEvent.OnlineMeetingUrl,
+                graphEvent.Body?.Content,
+                graphEvent.BodyPreview,
+                graphEvent.Location?.DisplayName),
         };
     }
 
