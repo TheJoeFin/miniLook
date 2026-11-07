@@ -24,6 +24,8 @@
     <Compile Include="..\miniLook\Models\AttachmentInfo.cs" Link="AppModels\AttachmentInfo.cs" />
     <Compile Include="..\miniLook\Models\ConversationGroup.cs" Link="AppModels\ConversationGroup.cs" />
     <Compile Include="..\miniLook\Models\MailCacheJsonContext.cs" Link="AppModels\MailCacheJsonContext.cs" />
+    <Compile Include="..\miniLook\Models\CalendarEventItem.cs" Link="AppModels\CalendarEventItem.cs" />
+    <Compile Include="..\miniLook\Models\CalendarCacheJsonContext.cs" Link="AppModels\CalendarCacheJsonContext.cs" />
     <Compile Include="..\miniLook\Contracts\Services\IMailCacheService.cs" Link="AppSync\IMailCacheService.cs" />
     <Compile Include="..\miniLook\Contracts\Services\IMailSyncClient.cs" Link="AppSync\IMailSyncClient.cs" />
     <Compile Include="..\miniLook\Services\MailSyncEngine.cs" Link="AppSync\MailSyncEngine.cs" />

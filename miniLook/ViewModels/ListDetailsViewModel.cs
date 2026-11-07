@@ -104,12 +104,19 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     private IMailCacheService MailCacheService { get; }
 
+    private ICalendarCacheService CalendarCacheService { get; }
+
     private IGraphService GraphService { get; }
 
-    public ListDetailsViewModel(INavigationService navigationService, IMailCacheService mailCacheService, IGraphService graphService)
+    public ListDetailsViewModel(
+        INavigationService navigationService,
+        IMailCacheService mailCacheService,
+        ICalendarCacheService calendarCacheService,
+        IGraphService graphService)
     {
         NavigationService = navigationService;
         MailCacheService = mailCacheService;
+        CalendarCacheService = calendarCacheService;
         GraphService = graphService;
         _syncEngine = new MailSyncEngine(mailCacheService)
         {
@@ -404,6 +411,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             // corrected by a full listing rather than trusted, possibly for another account.
             MailCacheService.DeltaLink = null;
             await MailCacheService.SaveDeltaLink(null);
+            await CalendarCacheService.ClearEventsAsync();
             await MailCacheService.ClearMailCacheAsync();
         }
         finally
