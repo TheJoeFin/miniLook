@@ -80,4 +80,38 @@ public class CalendarEventPolicyTests
         Assert.Equal(new DateTime(2026, 11, 7, 0, 0, 0), start);
         Assert.Equal(new DateTime(2026, 11, 8, 0, 0, 0), end);
     }
+
+    [Fact]
+    public void ExplicitOnlineMeetingUrlIsPreferred()
+    {
+        string? link = CalendarEventPolicy.GetMeetingLink(
+            "https://meet.example.test/room/123",
+            "<a href=\"https://zoom.us/j/123\">Join Zoom</a>",
+            null,
+            null);
+
+        Assert.Equal("https://meet.example.test/room/123", link);
+    }
+
+    [Theory]
+    [InlineData("<a href=\"https://teams.microsoft.com/l/meetup-join/abc\">Join Teams</a>")]
+    [InlineData("Dial in at https://contoso.zoom.us/j/123456?pwd=abc.")]
+    public void RecognizedMeetingLinksAreFoundInEventDetails(string content)
+    {
+        string? link = CalendarEventPolicy.GetMeetingLink(null, content, null, null);
+
+        Assert.NotNull(link);
+    }
+
+    [Fact]
+    public void UnrelatedEventLinksAreIgnored()
+    {
+        string? link = CalendarEventPolicy.GetMeetingLink(
+            null,
+            "<a href=\"https://outlook.office.com/calendar/item/123\">Open event</a>",
+            null,
+            "https://example.com/agenda");
+
+        Assert.Null(link);
+    }
 }
