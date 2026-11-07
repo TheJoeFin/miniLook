@@ -1,4 +1,6 @@
 ﻿using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Input;
 using miniLook.Models;
 using miniLook.ViewModels;
 using Windows.Foundation;
@@ -13,6 +15,9 @@ public sealed partial class ListDetailsPage : Page
     }
 
     private ConversationGroup? _hoveredGroup;
+    private MenuFlyout? _conversationMenu;
+
+    public bool IsChecked(bool? value) => value == true;
 
     public ListDetailsPage()
     {
@@ -23,6 +28,48 @@ public sealed partial class ListDetailsPage : Page
             : OtherSelectorBarItem;
         FocusedOtherSelectorBar.SelectionChanged += FocusedOtherSelectorBar_SelectionChanged;
         Loaded += ListDetailsPage_Loaded;
+        Unloaded += (_, _) => _conversationMenu?.Hide();
+    }
+
+    private void Conversation_ContextRequested(UIElement sender, ContextRequestedEventArgs args)
+    {
+        if (sender is not FrameworkElement element || element.DataContext is not ConversationGroup group)
+            return;
+
+        if (_conversationMenu is null)
+        {
+            _conversationMenu = new();
+            _conversationMenu.Items.Add(new MenuFlyoutItem
+            {
+                Text = "Archive",
+                Icon = new FontIcon { Glyph = "\uE7B8" },
+                Command = ViewModel.ArchiveConversationCommand
+            });
+            _conversationMenu.Items.Add(new MenuFlyoutItem
+            {
+                Text = "Mark All As Read",
+                Icon = new FontIcon { Glyph = "\uE8C3" },
+                Command = ViewModel.MarkConversationAsReadCommand
+            });
+            _conversationMenu.Items.Add(new MenuFlyoutItem
+            {
+                Text = "Pop out",
+                Icon = new SymbolIcon(Symbol.NewWindow),
+                Command = ViewModel.PopOutConversationCommand
+            });
+            _conversationMenu.Closed += (_, _) =>
+            {
+                foreach (MenuFlyoutItem item in _conversationMenu.Items.OfType<MenuFlyoutItem>())
+                    item.CommandParameter = null;
+            };
+        }
+        foreach (MenuFlyoutItem item in _conversationMenu.Items.OfType<MenuFlyoutItem>())
+            item.CommandParameter = group;
+        if (args.TryGetPosition(element, out Windows.Foundation.Point position))
+            _conversationMenu.ShowAt(element, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions { Position = position });
+        else
+            _conversationMenu.ShowAt(element);
+        args.Handled = true;
     }
 
     private void ListDetailsPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -45,7 +92,6 @@ public sealed partial class ListDetailsPage : Page
         }
 
         App.PopOutWindow = new PopOutWindow();
-        App.PopOutWindow.Closed += (s, args) => App.PopOutWindow = null;
         App.PopOutWindow.Activate();
     }
 

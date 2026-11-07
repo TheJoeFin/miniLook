@@ -74,6 +74,18 @@
                 Margin="{StaticResource XSmallTopMargin}"
                 IsOn="{x:Bind ViewModel.AlwaysRenderHtml, Mode=TwoWay}" />
 
+            <ToggleSwitch
+                x:Name="BackgroundUpdatesToggle"
+                x:Uid="Settings_BackgroundTrayUpdates"
+                Margin="{StaticResource XSmallTopMargin}"
+                IsOn="{x:Bind ViewModel.BackgroundTrayUpdates, Mode=OneWay}"
+                Toggled="BackgroundUpdatesToggle_Toggled" />
+            <InfoBar
+                IsClosable="False"
+                IsOpen="{x:Bind ViewModel.HasSettingsError, Mode=OneWay}"
+                Message="{x:Bind ViewModel.SettingsError, Mode=OneWay}"
+                Severity="Error" />
+
             <HyperlinkButton
                 x:Uid="Settings_ClearMailCache"
                 Command="{x:Bind ViewModel.ClearCachedDataCommand}"

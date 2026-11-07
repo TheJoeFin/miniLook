@@ -17,6 +17,7 @@ public partial class SettingsViewModel : ObservableRecipient
 {
     private readonly IThemeSelectorService _themeSelectorService;
     private readonly ILocalSettingsService _localSettingsService;
+    private readonly IBackgroundSyncService _backgroundSyncService;
 
     internal const string AlwaysRenderHtmlSettingsKey = "AlwaysRenderHtml";
 
@@ -32,16 +33,38 @@ public partial class SettingsViewModel : ObservableRecipient
     [ObservableProperty]
     private bool _alwaysRenderHtml;
 
+    private bool _backgroundTrayUpdates;
+    public bool BackgroundTrayUpdates
+    {
+        get => _backgroundTrayUpdates;
+        set => SetProperty(ref _backgroundTrayUpdates, value);
+    }
+
+    private string _settingsError = string.Empty;
+    public string SettingsError
+    {
+        get => _settingsError;
+        set
+        {
+            if (SetProperty(ref _settingsError, value))
+                OnPropertyChanged(nameof(HasSettingsError));
+        }
+    }
+
+    public bool HasSettingsError => !string.IsNullOrEmpty(SettingsError);
+
     public ICommand SwitchThemeCommand { get; }
 
     public INavigationService NavigationService { get; }
 
     public IMailCacheService MailCacheService { get; }
 
-    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService, IMailCacheService mailCacheService, ILocalSettingsService localSettingsService)
+    public SettingsViewModel(IThemeSelectorService themeSelectorService, INavigationService navigationService, IMailCacheService mailCacheService, ILocalSettingsService localSettingsService, IBackgroundSyncService backgroundSyncService)
     {
         _themeSelectorService = themeSelectorService;
         _localSettingsService = localSettingsService;
+        _backgroundSyncService = backgroundSyncService;
+        BackgroundTrayUpdates = backgroundSyncService.BackgroundEnabled;
         _elementTheme = _themeSelectorService.Theme;
         _versionDescription = GetVersionDescription();
 
@@ -59,6 +82,24 @@ public partial class SettingsViewModel : ObservableRecipient
         MailCacheService = mailCacheService;
 
         InitializeSettingsAsync();
+    }
+
+    public async Task SetBackgroundTrayUpdatesAsync(bool enabled)
+    {
+        if (enabled == _backgroundSyncService.BackgroundEnabled)
+            return;
+        try
+        {
+            await _backgroundSyncService.SetBackgroundEnabledAsync(enabled);
+            BackgroundTrayUpdates = enabled;
+            SettingsError = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Settings] Could not save background tray updates: {ex.Message}");
+            SettingsError = "Settings_SaveError".GetLocalized();
+            OnPropertyChanged(nameof(BackgroundTrayUpdates));
+        }
     }
 
     private async void InitializeSettingsAsync()
@@ -84,8 +125,16 @@ public partial class SettingsViewModel : ObservableRecipient
     private async Task ClearCachedData()
     {
         ListDetailsViewModel listDetailsViewModel = App.GetService<ListDetailsViewModel>();
-        await listDetailsViewModel.ClearOutContents();
-        CanClearCache = false;
+        try
+        {
+            await listDetailsViewModel.ClearOutContents();
+            CanClearCache = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Cache] Could not clear cached mail: {ex.Message}");
+            SettingsError = "Settings_SaveError".GetLocalized();
+        }
     }
 
     private static string GetVersionDescription()

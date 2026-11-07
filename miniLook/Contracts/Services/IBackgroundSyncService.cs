@@ -2,6 +2,9 @@ namespace miniLook.Contracts.Services;
 
 public interface IBackgroundSyncService
 {
-    void Start();
-    void Stop();
+    bool BackgroundEnabled { get; }
+    Task StartAsync();
+    Task StopAsync();
+    Task SetBackgroundEnabledAsync(bool enabled);
+    void SetForegroundActive(bool active);
 }

@@ -9,6 +9,7 @@ using Microsoft.Graph.Models;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Windowing;
 
 using miniLook.Activation;
 using miniLook.Contracts.Services;
@@ -41,6 +42,10 @@ public partial class App : Application
     private Mutex? _singleInstanceMutex;
     private EventWaitHandle? _trayIconRestoreEvent;
     private DispatcherQueueTimer? _restoreEventMonitorTimer;
+    private DispatcherQueueTimer? _idleMemoryTimer;
+    private CancellationTokenSource? _idleMemoryCancellation;
+    private string? _lastTrayIconPath;
+    private int _lastBadgeCount = -1;
 
     private int _lastFocusedUnreadCount = 0;
     private List<Event> _upcomingEvents = [];
@@ -184,7 +189,7 @@ public partial class App : Application
         UpdateTrayTooltip();
         StartRestoreEventMonitor();
 
-        GetService<IBackgroundSyncService>().Start();
+        await GetService<IBackgroundSyncService>().StartAsync();
     }
 
     #region Tray Icon
@@ -216,7 +221,7 @@ public partial class App : Application
             _flyoutWindow.Closed += (_, _) =>
             {
                 _flyoutWindow = null;
-                MemoryService.ReleaseIdle();
+                NotifyWindowVisibilityChanged();
             };
         }
 
@@ -252,7 +257,7 @@ public partial class App : Application
         {
             Command = FindCommand("ExitApplicationCommand"),
         };
-        exitItem.Click += (_, _) => ExitApplication();
+        exitItem.Click += async (_, _) => await ExitApplicationAsync();
 
         MenuFlyout flyout = new()
         {
@@ -276,15 +281,61 @@ public partial class App : Application
         return null;
     }
 
-    private void ExitApplication()
+    private async Task ExitApplicationAsync()
     {
-        GetService<IBackgroundSyncService>().Stop();
+        await GetService<IBackgroundSyncService>().StopAsync();
+        _idleMemoryTimer?.Stop();
+        _idleMemoryCancellation?.Cancel();
+        _uiSettings.ColorValuesChanged -= OnColorValuesChanged;
         _restoreEventMonitorTimer?.Stop();
         _flyoutWindow?.CloseWindow();
+        PopOutWindow?.Close();
+        foreach (MailItemWindow window in MailItemWindows.Values.ToArray())
+            window.Close();
+        foreach (HtmlViewWindow window in HtmlViewWindows.Values.ToArray())
+            window.Close();
         _trayIcon?.Dispose();
         _trayIcon = null;
+        _trayIconRestoreEvent?.Dispose();
+        _singleInstanceMutex?.Dispose();
         MainWindow.Close();
         Exit();
+    }
+
+    public static bool HasVisibleWindows => Current is App app
+        && (app._flyoutWindow?.IsPopupVisible == true || IsVisible(PopOutWindow)
+            || MailItemWindows.Values.Any(IsVisible) || HtmlViewWindows.Values.Any(IsVisible));
+
+    private static bool IsVisible(Window? window) => window is not null && window.AppWindow.IsVisible
+        && (window.AppWindow.Presenter is not OverlappedPresenter presenter
+            || presenter.State != OverlappedPresenterState.Minimized);
+
+    public static void NotifyWindowVisibilityChanged()
+    {
+        if (Current is not App app)
+            return;
+
+        bool visible = HasVisibleWindows;
+        GetService<IBackgroundSyncService>().SetForegroundActive(visible);
+        app._idleMemoryTimer?.Stop();
+        app._idleMemoryCancellation?.Cancel();
+        if (visible || app._flyoutWindow is not null)
+            return;
+
+        app._idleMemoryCancellation?.Dispose();
+        app._idleMemoryCancellation = new();
+        if (app._idleMemoryTimer is null)
+        {
+            app._idleMemoryTimer = MainWindow.DispatcherQueue.CreateTimer();
+            app._idleMemoryTimer.IsRepeating = false;
+            app._idleMemoryTimer.Interval = TimeSpan.FromSeconds(5);
+            app._idleMemoryTimer.Tick += (_, _) =>
+            {
+                if (!HasVisibleWindows && app._flyoutWindow is null && app._idleMemoryCancellation is not null)
+                    MemoryService.ReleaseIdle(app._idleMemoryCancellation.Token);
+            };
+        }
+        app._idleMemoryTimer.Start();
     }
 
     #endregion
@@ -296,7 +347,6 @@ public partial class App : Application
         if (_trayIcon is null)
             return;
 
-        bool isDark = IsSystemInDarkMode();
         string iconUri;
 
         if (_lastFocusedUnreadCount > 0)
@@ -314,7 +364,11 @@ public partial class App : Application
 
         try
         {
-            _trayIcon.SetIcon(iconUri);
+            if (_lastTrayIconPath != iconUri)
+            {
+                _trayIcon.SetIcon(iconUri);
+                _lastTrayIconPath = iconUri;
+            }
         }
         catch
         {
@@ -373,7 +427,8 @@ public partial class App : Application
 
     private void OnColorValuesChanged(UISettings sender, object args)
     {
-        _ = UpdateTrayIconAsync();
+        if (!MainWindow.DispatcherQueue.TryEnqueue(() => _ = UpdateTrayIconAsync()))
+            System.Diagnostics.Debug.WriteLine("[Tray] Could not dispatch a theme update.");
     }
 
     #endregion
@@ -430,24 +485,30 @@ public partial class App : Application
 
     public static void SetUnreadMailCounts(int totalUnreadCount, int focusedUnreadCount)
     {
-        // Update taskbar badge
-        XmlDocument badgeXml =
-            BadgeUpdateManager.GetTemplateContent(BadgeTemplateType.BadgeNumber);
-
-        if (badgeXml.SelectSingleNode("/badge") is not XmlElement badgeElement)
+        if (Current is not App app)
             return;
+        if (app._lastBadgeCount != totalUnreadCount)
+        {
+            // Update taskbar badge
+            XmlDocument badgeXml =
+                BadgeUpdateManager.GetTemplateContent(BadgeTemplateType.BadgeNumber);
 
-        badgeElement.SetAttribute("value", totalUnreadCount.ToString());
+            if (badgeXml.SelectSingleNode("/badge") is not XmlElement badgeElement)
+                return;
 
-        BadgeNotification badge = new BadgeNotification(badgeXml);
+            badgeElement.SetAttribute("value", totalUnreadCount.ToString());
 
-        BadgeUpdater badgeUpdater =
-            BadgeUpdateManager.CreateBadgeUpdaterForApplication();
+            BadgeNotification badge = new BadgeNotification(badgeXml);
 
-        badgeUpdater.Update(badge);
+            BadgeUpdater badgeUpdater =
+                BadgeUpdateManager.CreateBadgeUpdaterForApplication();
+
+            badgeUpdater.Update(badge);
+            app._lastBadgeCount = totalUnreadCount;
+        }
 
         // Also update tray icon and tooltip
-        if (Current is App app)
+        if (app._lastFocusedUnreadCount != focusedUnreadCount)
         {
             app._lastFocusedUnreadCount = focusedUnreadCount;
             _ = app.UpdateTrayIconAsync();
@@ -462,6 +523,12 @@ public partial class App : Application
             app._upcomingEvents = events.ToList();
             _ = app.UpdateTrayIconAsync();
         }
+    }
+
+    public static void RefreshTrayState()
+    {
+        if (Current is App app)
+            _ = app.UpdateTrayIconAsync();
     }
 
     #endregion

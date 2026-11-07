@@ -5,6 +5,7 @@ using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.Kiota.Abstractions.Authentication;
 using Microsoft.Windows.ApplicationModel.Resources;
 using miniLook.Contracts.Services;
+using miniLook.Core.Helpers;
 using System.Diagnostics;
 using Windows.Storage;
 
@@ -197,16 +198,28 @@ public class GraphService : IGraphService
 
         Client = new GraphServiceClient(
             new BaseBearerTokenAuthenticationProvider(
-                new MsalTokenProvider(_activePca, Scopes)));
+                new MsalTokenProvider(_activePca, Scopes, OnSignInExpired)));
 
         IsAuthenticated = true;
         AuthenticationStateChanged?.Invoke(this, true);
     }
 
+    private void OnSignInExpired()
+    {
+        if (!IsAuthenticated)
+            return;
+
+        IsAuthenticated = false;
+        AuthenticationStateChanged?.Invoke(this, false);
+    }
+
     /// <summary>
     /// Bridges MSAL token acquisition into the Kiota IAccessTokenProvider expected by GraphServiceClient.
+    /// Most requests come from unattended polling, so this never prompts. A prompt could appear at any
+    /// time, repeat on every retry, or wait forever behind the hidden main window. Signing in again is
+    /// left to an explicit action through <see cref="SignInAsync"/>.
     /// </summary>
-    private sealed class MsalTokenProvider(IPublicClientApplication pca, string[] scopes) : IAccessTokenProvider
+    private sealed class MsalTokenProvider(IPublicClientApplication pca, string[] scopes, Action onSignInExpired) : IAccessTokenProvider
     {
         public AllowedHostsValidator AllowedHostsValidator { get; } = new();
 
@@ -224,11 +237,10 @@ public class GraphService : IGraphService
                     .AcquireTokenSilent(scopes, accounts.FirstOrDefault())
                     .ExecuteAsync(cancellationToken);
             }
-            catch (MsalUiRequiredException)
+            catch (MsalUiRequiredException ex)
             {
-                result = await pca
-                    .AcquireTokenInteractive(scopes)
-                    .ExecuteAsync(cancellationToken);
+                onSignInExpired();
+                throw new SignInRequiredException(ex);
             }
 
             return result.AccessToken;

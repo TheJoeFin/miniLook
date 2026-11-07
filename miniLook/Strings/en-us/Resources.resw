@@ -228,4 +228,43 @@ If you have any feedback please reach out to joe@JoeFinApps.com
   <data name="OpenInBrowserButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Open in browser</value>
   </data>
+  <data name="Sync_Error" xml:space="preserve">
+    <value>Could not refresh your inbox. Last-known mail is still available; miniLook will retry.</value>
+  </data>
+  <data name="Sync_SignInRequired" xml:space="preserve">
+    <value>Your sign-in has expired. Last-known mail is still available; sign in again to keep it up to date.</value>
+  </data>
+  <data name="SyncErrorInfoBarSignIn.Content" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="SyncErrorInfoBar.Title" xml:space="preserve">
+    <value>Refresh failed</value>
+  </data>
+  <data name="Html_Error" xml:space="preserve">
+    <value>Could not load the HTML view. Please try again.</value>
+  </data>
+  <data name="Attachment_Error" xml:space="preserve">
+    <value>Could not download or open this attachment. Please try again.</value>
+  </data>
+  <data name="SignIn_Error" xml:space="preserve">
+    <value>Sign-in was canceled or could not be completed. Please try again.</value>
+  </data>
+  <data name="Mail_InvalidRecipient" xml:space="preserve">
+    <value>Enter a valid email address for each recipient.</value>
+  </data>
+  <data name="Mail_SendFailed" xml:space="preserve">
+    <value>Your message could not be sent. Check your connection and try again.</value>
+  </data>
+  <data name="Mail_SendSignInRequired" xml:space="preserve">
+    <value>Your message was not sent because your sign-in has expired. Go back to your inbox and sign in again.</value>
+  </data>
+  <data name="Mail_ContactsUnavailable" xml:space="preserve">
+    <value>Suggested recipients could not be loaded. You can still enter email addresses manually.</value>
+  </data>
+  <data name="Settings_BackgroundTrayUpdates.Header" xml:space="preserve">
+    <value>Update tray indicators while windows are closed</value>
+  </data>
+  <data name="Settings_SaveError" xml:space="preserve">
+    <value>Could not save this setting. Please try again.</value>
+  </data>
 </root>

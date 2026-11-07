@@ -1,5 +1,6 @@
 ﻿using miniLook.Contracts.Services;
 using miniLook.Models;
+using miniLook.Core.Helpers;
 using System.Diagnostics;
 using System.Text.Json;
 using Windows.Storage;
@@ -13,9 +14,19 @@ internal class MailCacheService : IMailCacheService
 
     private const string MailWindowMonthsKey = "MailWindowMonths";
 
+    private const string SyncStateVersionKey = "MailSyncStateVersion";
+
+    // Raise this when a saved cache can no longer be trusted. Dropping the cursor makes the next sync
+    // list the whole window and correct every cached message. Version 2 repairs read states lost by
+    // a cache format that left IsRead out.
+    private const int CurrentSyncStateVersion = 2;
+
     private const int DefaultMailWindowMonths = 2;
 
     private readonly ILocalSettingsService _localSettingsService;
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
+
+    private static string CachePath => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, MailCacheFileName);
 
     public MailCacheService(ILocalSettingsService localSettingsService)
     {
@@ -28,46 +39,49 @@ internal class MailCacheService : IMailCacheService
 
     public async Task ClearMailCacheAsync()
     {
-        StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
-        StorageFile cacheFile = await localCacheFolder.GetFileAsync(MailCacheFileName);
-        await cacheFile.DeleteAsync();
+        await _writeGate.WaitAsync();
+        try
+        {
+            await Task.Run(() =>
+            {
+                File.Delete(CachePath);
+                string attachments = Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "Attachments");
+                if (Directory.Exists(attachments))
+                {
+                    foreach (string file in Directory.GetFiles(attachments))
+                        File.Delete(file);
+                }
+            });
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 
     public async Task<IEnumerable<MailData>> GetEmailsAsync()
     {
-        StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
-        StorageFile cacheFile;
-
         try
         {
-            cacheFile = await localCacheFolder.GetFileAsync(MailCacheFileName);
+            return await Task.Run(async () =>
+            {
+                await using FileStream stream = new(CachePath, FileMode.Open, FileAccess.Read,
+                    FileShare.Read | FileShare.Delete, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                return await JsonSerializer.DeserializeAsync(stream, MailCacheJsonContext.Default.ListMailData)
+                    ?? throw new JsonException("The mail cache contains no collection.");
+            });
         }
         catch (FileNotFoundException)
         {
+            await SaveDeltaLink(null);
             return [];
         }
-
-        string rawJson = string.Empty;
-        try
+        catch (JsonException ex)
         {
-            using TextReader textReader = new StreamReader(await cacheFile.OpenStreamForReadAsync());
-            rawJson = textReader.ReadToEnd();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-            throw;
-        }
-
-        if (string.IsNullOrEmpty(rawJson))
+            Debug.WriteLine($"[Cache] The mail cache is invalid and will be refreshed: {ex.Message}");
+            await SaveDeltaLink(null);
             return [];
-
-        IEnumerable<MailData>? mailData = JsonSerializer.Deserialize<IEnumerable<MailData>>(rawJson);
-        
-        if (mailData is null)
-            return [];
-
-        return mailData;
+        }
     }
 
     public async Task InitializeAsync()
@@ -75,12 +89,19 @@ internal class MailCacheService : IMailCacheService
         DeltaLink = await _localSettingsService.ReadSettingAsync<string?>(DeltaLinkKey);
         int? savedMonths = await _localSettingsService.ReadSettingAsync<int?>(MailWindowMonthsKey);
         MailWindowMonths = savedMonths ?? DefaultMailWindowMonths;
+
+        int? savedVersion = await _localSettingsService.ReadSettingAsync<int?>(SyncStateVersionKey);
+        if (savedVersion != CurrentSyncStateVersion)
+        {
+            await SaveDeltaLink(null);
+            await _localSettingsService.SaveSettingAsync(SyncStateVersionKey, CurrentSyncStateVersion);
+        }
     }
 
     public async Task SaveDeltaLink(string? deltaLink)
     {
-        DeltaLink = deltaLink;
         await _localSettingsService.SaveSettingAsync(DeltaLinkKey, deltaLink);
+        DeltaLink = deltaLink;
     }
 
     public async Task SaveMailWindowMonthsAsync(int months)
@@ -89,21 +110,19 @@ internal class MailCacheService : IMailCacheService
         await _localSettingsService.SaveSettingAsync(MailWindowMonthsKey, months);
     }
 
-    public async Task SaveEmailsAsync(IEnumerable<MailData> allMailData)
+    public async Task SaveEmailsAsync(IEnumerable<MailData> allMailData, CancellationToken cancellationToken = default)
     {
-        string json = JsonSerializer.Serialize(allMailData);
-
-        StorageFolder localCacheFolder = ApplicationData.Current.LocalCacheFolder;
+        List<MailData> snapshot = allMailData.Select(mail => mail.CreateCacheSnapshot()).ToList();
+        await _writeGate.WaitAsync(cancellationToken);
         try
         {
-            StorageFile cacheFile = await localCacheFolder.CreateFileAsync(MailCacheFileName, CreationCollisionOption.ReplaceExisting);
-
-            using TextWriter textWriter = new StreamWriter(await cacheFile.OpenStreamForWriteAsync());
-            textWriter.Write(json);
+            await Task.Run(() => AtomicFile.WriteAsync(CachePath,
+                (stream, token) => JsonSerializer.SerializeAsync(stream, snapshot, MailCacheJsonContext.Default.ListMailData, token),
+                cancellationToken), cancellationToken);
         }
-        catch (IOException)
+        finally
         {
+            _writeGate.Release();
         }
-        // TODO: Handle exceptions properly, maybe with retry logic
     }
 }

@@ -16,6 +16,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -185,10 +186,16 @@
             </CommandBar.SecondaryCommands>
         </CommandBar>
 
+        <InfoBar
+            x:Name="StatusInfoBar"
+            Grid.Row="1"
+            IsClosable="True"
+            Severity="Error" />
+
         <!--  Attachments strip  -->
         <ItemsControl
             x:Name="AttachmentsPanel"
-            Grid.Row="1"
+            Grid.Row="2"
             Padding="16,6,16,6"
             ItemsSource="{x:Bind ListDetailsMenuItem.Attachments, Mode=OneWay}"
             Visibility="{x:Bind ListDetailsMenuItem.HasAttachments, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
@@ -228,7 +235,7 @@
         <!--  Body: plain text view (shown by default)  -->
         <ScrollViewer
             x:Name="BodyScrollViewer"
-            Grid.Row="2"
+            Grid.Row="3"
             Padding="16,10,16,16">
             <TextBlock
                 IsTextSelectionEnabled="True"
@@ -240,7 +247,8 @@
         <!--  Body: HTML web view  -->
         <Grid
             x:Name="WebViewPane"
-            Grid.Row="2"
+            x:Load="False"
+            Grid.Row="3"
             Visibility="Collapsed">
             <WebView2
                 x:Name="BodyWebView"

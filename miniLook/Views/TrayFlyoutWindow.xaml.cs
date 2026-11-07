@@ -128,6 +128,7 @@ public sealed partial class TrayFlyoutWindow : WindowEx
         if (!PInvoke.SetForegroundWindow(_hwnd))
             Debug.WriteLine("Windows did not grant foreground activation to the tray flyout.");
         _page.OnShown();
+        App.NotifyWindowVisibilityChanged();
     }
 
     public void HidePopup()
@@ -141,6 +142,7 @@ public sealed partial class TrayFlyoutWindow : WindowEx
         _lastDismissedAtUtc = DateTime.UtcNow;
         _uiSettings.ColorValuesChanged -= OnColorValuesChanged;
         _page.OnHidden();
+        App.NotifyWindowVisibilityChanged();
         PlayHideAnimation();
         _closeTimer.Stop();
         _closeTimer.Start();

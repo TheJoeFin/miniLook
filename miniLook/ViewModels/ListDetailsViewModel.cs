@@ -2,11 +2,13 @@
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Helpers;
 using Microsoft.Graph;
-using Microsoft.Graph.Me.MailFolders.Item.Messages.Delta;
 using Microsoft.Graph.Models;
 using miniLook.Contracts.Services;
 using miniLook.Contracts.ViewModels;
 using miniLook.Models;
+using miniLook.Core.Helpers;
+using miniLook.Helpers;
+using miniLook.Services;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -67,9 +69,33 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
     public bool HasGraphClient => _graphClient is not null;
 
-    private string? deltaLink = null;
-    private bool isSyncingMail = false;
+    private static readonly TimeSpan MailListRefreshInterval = TimeSpan.FromSeconds(1);
+
+    private readonly MailSyncEngine _syncEngine;
+    private readonly Stopwatch _sinceMailListRefresh = new();
     private bool isSigningOut = false;
+    private CancellationTokenSource? _syncCancellation;
+    private Task<SyncOutcome>? _syncTask;
+    private bool _groupsDirty;
+    private string? _mailboxTimeZone;
+    private DateTime _lastEventsSync = DateTime.MinValue;
+    private DateTime _lastOlderMailCheck = DateTime.MinValue;
+
+    private string _syncError = string.Empty;
+    public string SyncError
+    {
+        get => _syncError;
+        set
+        {
+            if (SetProperty(ref _syncError, value))
+                OnPropertyChanged(nameof(HasSyncError));
+        }
+    }
+
+    public bool HasSyncError => !string.IsNullOrEmpty(SyncError);
+
+    [ObservableProperty]
+    private bool needsSignIn = false;
 
     [ObservableProperty]
     private string debugText = $"{DateTime.Now:d} debug text begins";
@@ -85,6 +111,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NavigationService = navigationService;
         MailCacheService = mailCacheService;
         GraphService = graphService;
+        _syncEngine = new MailSyncEngine(mailCacheService)
+        {
+            Log = message => DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: {message}\n"),
+        };
         MailItems.CollectionChanged += MailItems_CollectionChanged;
     }
 
@@ -125,6 +155,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             .ToList();
 
         HashSet<string> desiredIds = desiredOrder.ToHashSet();
+        Dictionary<string, ConversationGroup> existingGroups = ConversationGroups.ToDictionary(group => group.ConversationId);
 
         // Remove groups that no longer exist
         for (int i = ConversationGroups.Count - 1; i >= 0; i--)
@@ -139,21 +170,11 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             string conversationId = desiredOrder[targetIndex];
             List<MailData> messages = newGroupData[conversationId];
 
-            int currentIndex = -1;
-            for (int j = 0; j < ConversationGroups.Count; j++)
+            if (existingGroups.TryGetValue(conversationId, out ConversationGroup? existing))
             {
-                if (ConversationGroups[j].ConversationId == conversationId)
-                {
-                    currentIndex = j;
-                    break;
-                }
-            }
-
-            if (currentIndex >= 0)
-            {
-                ConversationGroups[currentIndex].SyncMessages(messages);
-                if (currentIndex != targetIndex)
-                    ConversationGroups.Move(currentIndex, targetIndex);
+                existing.SyncMessages(messages);
+                if (!ReferenceEquals(ConversationGroups[targetIndex], existing))
+                    ConversationGroups.Move(ConversationGroups.IndexOf(existing), targetIndex);
             }
             else
             {
@@ -169,15 +190,18 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         List<ConversationGroup> filtered = ConversationGroups
             .Where(g => g.IsFocused == IsFocusedView)
             .ToList();
+        HashSet<ConversationGroup> desired = filtered.ToHashSet();
 
         for (int i = FilteredConversationGroups.Count - 1; i >= 0; i--)
         {
-            if (!filtered.Contains(FilteredConversationGroups[i]))
+            if (!desired.Contains(FilteredConversationGroups[i]))
                 FilteredConversationGroups.RemoveAt(i);
         }
 
         for (int i = 0; i < filtered.Count; i++)
         {
+            if (i < FilteredConversationGroups.Count && ReferenceEquals(FilteredConversationGroups[i], filtered[i]))
+                continue;
             int currentIndex = FilteredConversationGroups.IndexOf(filtered[i]);
             if (currentIndex < 0)
                 FilteredConversationGroups.Insert(i, filtered[i]);
@@ -192,11 +216,28 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         IsFocusedView = !IsFocusedView;
     }
 
-    public async Task RunBackgroundSyncAsync()
+    public Task<SyncOutcome> RunBackgroundSyncAsync(bool foreground = true, bool force = false, bool extendHistory = false)
     {
         if (IsLoadingContent || isSigningOut || !GraphService.IsAuthenticated)
-            return;
+            return Task.FromResult(SyncOutcome.Skipped);
 
+        _syncCancellation?.Dispose();
+        _syncCancellation = new();
+        _syncTask = RunSyncAsync(foreground, force, extendHistory, _syncCancellation.Token);
+        return _syncTask;
+    }
+
+    public void CancelPendingSync() => _syncCancellation?.Cancel();
+
+    public async Task CancelPendingSyncAsync()
+    {
+        CancelPendingSync();
+        if (_syncTask is not null)
+            await _syncTask;
+    }
+
+    private async Task<SyncOutcome> RunSyncAsync(bool foreground, bool force, bool extendHistory, CancellationToken cancellationToken)
+    {
         IsLoadingContent = true;
         try
         {
@@ -205,29 +246,107 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             if (_graphClient is null)
             {
                 Debug.WriteLine("[Sync] Cannot check mail without an authenticated Graph client.");
-                return;
+                throw new InvalidOperationException("An authenticated Graph client is unavailable.");
             }
 
             Debug.WriteLine("Checking for new mail");
             DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Checking for new mail\n");
             if (!loadedMail)
-            {
                 await TryToLoadMail(Selected);
-                return;
-            }
 
-            await GetEvents();
-            await SyncMail();
-            await CheckForOlderMailAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (extendHistory)
+            {
+                mailWindowMonths++;
+                await MailCacheService.SaveMailWindowMonthsAsync(mailWindowMonths);
+                await _syncEngine.RequestFullEnumerationAsync();
+            }
+            if (force || DateTime.UtcNow - _lastEventsSync >= PollingPolicy.GetCalendarInterval(foreground))
+                await TryRefreshEventsAsync(cancellationToken);
+            await SyncMail(cancellationToken);
+            if (foreground && (force || extendHistory || DateTime.UtcNow - _lastOlderMailCheck >= TimeSpan.FromMinutes(5)))
+                await TryCheckForOlderMailAsync(cancellationToken);
+            LastSync = DateTime.Now;
+            SyncError = string.Empty;
+            NeedsSignIn = false;
+            App.RefreshTrayState();
+            return SyncOutcome.Succeeded;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Debug.WriteLine("[Sync] Refresh canceled; the next pass continues from the last completed page.");
+            return SyncOutcome.Skipped;
+        }
+        catch (SignInRequiredException)
+        {
+            Debug.WriteLine("[Sync] The saved sign-in expired; waiting for the user to sign in again.");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Sign-in expired\n");
+            OnSignInStateChanged(false);
+            return SyncOutcome.Skipped;
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[Sync] Background sync failed: {ex.Message}");
             DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Background sync failed: {ex.Message}\n");
+            SyncError = "Sync_Error".GetLocalized();
+            return SyncOutcome.Failed;
         }
         finally
         {
+            if (_groupsDirty)
+                RefreshMailList();
             IsLoadingContent = false;
+        }
+    }
+
+    public void OnSignInStateChanged(bool isSignedIn)
+    {
+        NeedsSignIn = !isSignedIn && !isSigningOut;
+        SyncError = NeedsSignIn ? "Sync_SignInRequired".GetLocalized() : string.Empty;
+    }
+
+    private void RefreshMailList()
+    {
+        UpdateItems();
+        RebuildConversationGroups();
+        _groupsDirty = false;
+        _sinceMailListRefresh.Restart();
+    }
+
+    private void OnSyncChangedMail()
+    {
+        _groupsDirty = true;
+        // Shows a long sync as it goes, newest mail first, without rebuilding the groups on every page.
+        if (!_sinceMailListRefresh.IsRunning || _sinceMailListRefresh.Elapsed >= MailListRefreshInterval)
+            RefreshMailList();
+    }
+
+    private async Task TryRefreshEventsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await GetEvents(cancellationToken);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is not SignInRequiredException)
+        {
+            // Calendar trouble must not stop mail from syncing. Try again at the next calendar interval.
+            _lastEventsSync = DateTime.UtcNow;
+            Debug.WriteLine($"[Sync] Calendar refresh failed: {ex.Message}");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Calendar refresh failed: {ex.Message}\n");
+        }
+    }
+
+    private async Task TryCheckForOlderMailAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await CheckForOlderMailAsync(cancellationToken);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is not SignInRequiredException)
+        {
+            // The mail is already synced, so a failed history check is not a failed refresh.
+            _lastOlderMailCheck = DateTime.UtcNow;
+            Debug.WriteLine($"[Sync] Older mail check failed: {ex.Message}");
         }
     }
 
@@ -256,32 +375,55 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [RelayCommand]
     private async Task Refresh()
     {
-        await RunBackgroundSyncAsync();
+        await RunBackgroundSyncAsync(force: true);
     }
 
     public async Task ClearOutContents()
     {
-        MailItems.Clear();
-        ConversationGroups.Clear();
-        FilteredConversationGroups.Clear();
-        Events.Clear();
-        UpdateItems();
-        App.SetUpcomingEvents([]);
+        await CancelPendingSyncAsync();
+        IsLoadingContent = true;
+        try
+        {
+            MailItems.Clear();
+            ConversationGroups.Clear();
+            FilteredConversationGroups.Clear();
+            Events.Clear();
+            UpdateItems();
+            App.SetUpcomingEvents([]);
 
-        deltaLink = null;
+            _syncEngine.Reset();
+            loadedMail = false;
+            _mailboxTimeZone = null;
+            _lastEventsSync = DateTime.MinValue;
+            _lastOlderMailCheck = DateTime.MinValue;
+            _groupsDirty = false;
+            SyncError = string.Empty;
+            NeedsSignIn = false;
 
-        MailCacheService.DeltaLink = null;
-        await MailCacheService.ClearMailCacheAsync();
-        await MailCacheService.SaveDeltaLink(null);
-
-        loadedMail = false;
+            // The cursor goes first. A cache file left behind by a failed delete is then
+            // corrected by a full listing rather than trusted, possibly for another account.
+            MailCacheService.DeltaLink = null;
+            await MailCacheService.SaveDeltaLink(null);
+            await MailCacheService.ClearMailCacheAsync();
+        }
+        finally
+        {
+            IsLoadingContent = false;
+        }
     }
 
     [RelayCommand]
     private async Task SignOut()
     {
         isSigningOut = true;
-        await ClearOutContents();
+        try
+        {
+            await ClearOutContents();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Cache] Cached files could not all be removed during sign-out: {ex.Message}");
+        }
         await GraphService.SignOutAsync();
         _graphClient = null;
         NavigationService.NavigateTo(typeof(WelcomeViewModel).FullName!);
@@ -290,7 +432,14 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
     [RelayCommand]
     private async Task SignIn()
     {
-        await GraphService.SignInAsync();
+        try
+        {
+            await GraphService.SignInAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Auth] Sign-in failed: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -380,16 +529,8 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
-        MailFolderCollectionResponse? foldersResponse = await _graphClient.Me
-            .MailFolders
-            .GetAsync(config =>
-            {
-                config.QueryParameters.Filter = "displayName eq 'Archive'";
-            });
-
-        MailFolder? archiveFolder = foldersResponse?.Value?.FirstOrDefault();
-
-        if (archiveFolder is null)
+        string? archiveFolderId = await TryGetFolderIdAsync("Archive");
+        if (archiveFolderId is null)
             return;
 
         List<MailData> allOfConversation = [.. MailItems.Where(m => m.ConversationId == listDetailsMenuItem.ConversationId)];
@@ -397,27 +538,67 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         foreach (MailData conversationItem in allOfConversation)
             MailItems.Remove(conversationItem);
 
-        RebuildConversationGroups();
+        _syncEngine.MarkCacheDirty();
+        RefreshMailList();
 
         foreach (MailData conversationItem in allOfConversation)
         {
-            try
-            {
-                _ = await _graphClient.Me
-                    .MailFolders["Inbox"]
-                    .Messages[conversationItem.Id]
-                    .Move
-                    .PostAsync(new Microsoft.Graph.Me.MailFolders.Item.Messages.Item.Move.MovePostRequestBody
-                    {
-                        DestinationId = archiveFolder.Id
-                    });
-            }
-            catch (Exception)
-            {
-#if DEBUG
-                throw;
-#endif
-            }
+            if (await TryMoveMessageAsync(conversationItem, archiveFolderId))
+                continue;
+
+            // The server still has this message, and a delta will never report it as new,
+            // so it has to go back in the list now or it stays missing until a full resync.
+            // A sync that ran during the move may already have put it back.
+            if (!MailItems.Contains(conversationItem))
+                MailSyncEngine.InsertNewestFirst(MailItems, conversationItem);
+            RefreshMailList();
+        }
+    }
+
+    private async Task<string?> TryGetFolderIdAsync(string displayName)
+    {
+        if (_graphClient is null)
+            return null;
+
+        try
+        {
+            MailFolderCollectionResponse? foldersResponse = await _graphClient.Me
+                .MailFolders
+                .GetAsync(config =>
+                {
+                    config.QueryParameters.Filter = $"displayName eq '{displayName}'";
+                });
+
+            return foldersResponse?.Value?.FirstOrDefault()?.Id;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Mail] Could not find the {displayName} folder: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task<bool> TryMoveMessageAsync(MailData mail, string destinationFolderId)
+    {
+        if (_graphClient is null)
+            return false;
+
+        try
+        {
+            _ = await _graphClient.Me
+                .MailFolders["Inbox"]
+                .Messages[mail.Id]
+                .Move
+                .PostAsync(new Microsoft.Graph.Me.MailFolders.Item.Messages.Item.Move.MovePostRequestBody
+                {
+                    DestinationId = destinationFolderId
+                });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Mail] Could not move a message: {ex.Message}");
+            return false;
         }
     }
 
@@ -435,13 +616,35 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null || listDetailsMenuItem is null)
             return;
 
+        if (listDetailsMenuItem.IsRead == isRead)
+            return;
         listDetailsMenuItem.IsRead = isRead;
+        _syncEngine.MarkCacheDirty();
         UpdateItems();
 
-        _ = _graphClient.Me
-            .MailFolders["Inbox"]
-            .Messages[listDetailsMenuItem.Id]
-            .PatchAsync(new Message { IsRead = isRead });
+        _ = SaveReadStateAsync(_graphClient, listDetailsMenuItem, isRead);
+    }
+
+    private async Task SaveReadStateAsync(GraphServiceClient client, MailData mail, bool isRead)
+    {
+        try
+        {
+            await client.Me
+                .MailFolders["Inbox"]
+                .Messages[mail.Id]
+                .PatchAsync(new Message { IsRead = isRead });
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Mail] Could not save the read state: {ex.Message}");
+            // The server never changed, so no delta will correct this. Show what the server has.
+            if (mail.IsRead == isRead)
+            {
+                mail.IsRead = !isRead;
+                _syncEngine.MarkCacheDirty();
+                UpdateItems();
+            }
+        }
     }
 
     public async Task DeleteThisMailItem(MailData listDetailsMenuItem)
@@ -449,39 +652,41 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         if (_graphClient is null)
             return;
 
-        MailFolderCollectionResponse? foldersResponse = await _graphClient.Me
-            .MailFolders
-            .GetAsync(config =>
-            {
-                config.QueryParameters.Filter = "displayName eq 'Deleted Items'";
-            });
+        string? deletedFolderId = await TryGetFolderIdAsync("Deleted Items");
+        if (deletedFolderId is null)
+            return;
 
-        MailFolder? deletedFolder = foldersResponse?.Value?.FirstOrDefault();
+        // Move to Deleted Items instead of hard delete (matches Outlook behavior)
+        if (!await TryMoveMessageAsync(listDetailsMenuItem, deletedFolderId))
+            return;
 
-        if (deletedFolder is null)
+        MailItems.Remove(listDetailsMenuItem);
+        _syncEngine.MarkCacheDirty();
+        RefreshMailList();
+    }
+
+    /// <summary>Fills in attachments straight away when someone opens mail the sync has not reached yet.</summary>
+    public async Task LoadPendingAttachmentsAsync(MailData mail, CancellationToken cancellationToken)
+    {
+        if (_graphClient is null || !mail.AttachmentsPending)
             return;
 
         try
         {
-            // Move to Deleted Items instead of hard delete (matches Outlook behavior)
-            _ = await _graphClient.Me
-                .MailFolders["Inbox"]
-                .Messages[listDetailsMenuItem.Id]
-                .Move
-                .PostAsync(new Microsoft.Graph.Me.MailFolders.Item.Messages.Item.Move.MovePostRequestBody
-                {
-                    DestinationId = deletedFolder.Id
-                });
+            await MailSyncEngine.LoadAttachmentsAsync(new GraphMailSyncClient(_graphClient), mail, cancellationToken);
+            _syncEngine.MarkCacheDirty();
+            _groupsDirty = true;
+            if (!IsLoadingContent)
+                RefreshMailList();
         }
-        catch (Exception)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-#if DEBUG
-            throw;
-#endif
+            Debug.WriteLine("[Attachments] Listing canceled because the detail view changed.");
         }
-
-        MailItems.Remove(listDetailsMenuItem);
-        RebuildConversationGroups();
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Attachments] Could not list attachments: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -501,16 +706,20 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         NavigationService.NavigateTo(typeof(RenderWebViewViewModel).FullName!, ListDetailsMenuItem);
     }
 
-    public async Task<byte[]?> GetAttachmentContentAsync(string messageId, string attachmentId)
+    public async Task<byte[]?> GetAttachmentContentAsync(string messageId, string attachmentId, CancellationToken cancellationToken = default)
     {
         if (_graphClient is null)
             return null;
 
         try
         {
-            Attachment? attachment = await _graphClient.Me.Messages[messageId].Attachments[attachmentId].GetAsync();
+            Attachment? attachment = await _graphClient.Me.Messages[messageId].Attachments[attachmentId].GetAsync(cancellationToken: cancellationToken);
             if (attachment is FileAttachment fileAttachment)
                 return fileAttachment.ContentBytes;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -520,7 +729,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         return null;
     }
 
-    public async Task<string> GetHtmlBodyAsync(string messageId)
+    public async Task<string> GetHtmlBodyAsync(string messageId, CancellationToken cancellationToken = default)
     {
         if (_graphClient is null)
             return string.Empty;
@@ -530,7 +739,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             Message? message = await _graphClient.Me.Messages[messageId].GetAsync(config =>
             {
                 config.QueryParameters.Select = ["body"];
-            });
+            }, cancellationToken: cancellationToken);
 
             if (message?.Body is null)
                 return string.Empty;
@@ -541,6 +750,10 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
             // Plain-text email: wrap in <pre> so it displays correctly in WebView
             string escaped = System.Net.WebUtility.HtmlEncode(message.Body.Content ?? string.Empty);
             return $"<html><body><pre style='white-space:pre-wrap;font-family:sans-serif;'>{escaped}</pre></body></html>";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -569,7 +782,7 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         App.HtmlViewWindows[mailId] = window;
         window.Closed += (s, e) => App.HtmlViewWindows.Remove(mailId);
         window.Activate();
-        _ = window.SetContent(htmlBody);
+        await window.SetContent(htmlBody);
     }
 
     private async Task TryToLoadMail(MailData? selectMailData = null)
@@ -585,324 +798,77 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
 
         MailItems.Clear();
         Events.Clear();
-        foreach (MailData mail in tempMailItems)
+        foreach (MailData mail in MailSyncEngine.NormalizeCached(tempMailItems))
             MailItems.Add(mail);
 
-        deltaLink = MailCacheService.DeltaLink;
         loadedMail = true;
 
         RebuildConversationGroups();
         UpdateItems();
 
         Selected = selectMailData;
-
-        if (!HasInternet)
-            return;
-
-        _graphClient = GraphService.Client;
-        if (_graphClient is null)
-            return;
-
-        User? me = await _graphClient.Me.GetAsync();
-        AccountName = me?.DisplayName ?? string.Empty;
-
-        await GetEvents();
-        await SyncMail();
-        await CheckForOlderMailAsync();
-
-        await MailCacheService.SaveEmailsAsync(MailItems);
     }
 
-    private async Task SyncMail()
+    private async Task SyncMail(CancellationToken cancellationToken)
     {
-        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Syncing Mail\n");
-        if (_graphClient is null
-            || !HasInternet
-            || isSigningOut
-            || !GraphService.IsAuthenticated
-            || isSyncingMail)
+        if (_graphClient is null || isSigningOut || !GraphService.IsAuthenticated)
         {
-            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Graph client is null {_graphClient is null} or isSyncingMail {isSyncingMail} caused return\n");
+            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Skipped mail sync because no account is signed in\n");
             return;
         }
 
-        isSyncingMail = true;
-
-        try
-        {
-            DateTime syncCutoff = DateTime.UtcNow.AddMonths(-mailWindowMonths);
-            string initialSyncFilter = "receivedDateTime ge " + syncCutoff.ToString("yyyy-MM-ddTHH:mm:ss") + "Z";
-            DeltaGetResponse? currentPage;
-
-            if (deltaLink is not null)
-            {
-                Debug.WriteLine($"[Sync] Using existing delta link: {deltaLink[..Math.Min(80, deltaLink.Length)]}...");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Using existing delta link\n");
-                try
-                {
-                    currentPage = await new DeltaRequestBuilder(deltaLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[Sync] Delta link request failed, resetting to full sync: {ex.Message}");
-                    DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Delta link failed, doing full sync\n");
-                    deltaLink = null;
-                    MailCacheService.DeltaLink = null;
-                    currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync(config =>
-                    {
-                        config.QueryParameters.Select = ["id", "isRead", "sender", "toRecipients", "ccRecipients", "subject", "bodyPreview", "webLink", "receivedDateTime", "conversationId", "inferenceClassification", "hasAttachments"];
-                        config.QueryParameters.Filter = initialSyncFilter;
-                    });
-                }
-            }
-            else
-            {
-                Debug.WriteLine("[Sync] No delta link, starting full delta sync.");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: No delta link, starting full sync\n");
-                currentPage = await _graphClient.Me.MailFolders["Inbox"].Messages.Delta.GetAsDeltaGetResponseAsync(config =>
-                {
-                    config.QueryParameters.Select = ["id", "isRead", "sender", "toRecipients", "ccRecipients", "subject", "bodyPreview", "webLink", "receivedDateTime", "conversationId", "inferenceClassification", "hasAttachments"];
-                    config.QueryParameters.Filter = initialSyncFilter;
-                });
-            }
-
-            int pageNumber = 0;
-
-            do
-            {
-                pageNumber++;
-
-                if (currentPage?.Value is null)
-                {
-                    Debug.WriteLine($"[Sync] Page {pageNumber}: Value is null, stopping pagination.");
-                    DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Page {pageNumber} Value is null, stopping\n");
-                    break;
-                }
-
-                DateTimeOffset? oldest = currentPage.Value
-                    .Where(m => m.ReceivedDateTime is not null)
-                    .Min(m => m.ReceivedDateTime);
-                DateTimeOffset? newest = currentPage.Value
-                    .Where(m => m.ReceivedDateTime is not null)
-                    .Max(m => m.ReceivedDateTime);
-
-                Debug.WriteLine($"[Sync] Page {pageNumber}: {currentPage.Value.Count} messages, oldest={oldest}, newest={newest}, hasNextLink={currentPage.OdataNextLink is not null}, hasDeltaLink={currentPage.OdataDeltaLink is not null}");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Page {pageNumber}: {currentPage.Value.Count} msgs, oldest={oldest:g}, newest={newest:g}\n");
-
-                int addedCount = 0;
-                int updatedCount = 0;
-                int removedCount = 0;
-                int skippedSparseCount = 0;
-
-                foreach (Message message in currentPage.Value)
-                {
-                    if (isSigningOut || !HasInternet)
-                        return;
-
-                    MailData? matchingMessage = MailItems.FirstOrDefault(m => m.Id == message.Id);
-
-                    if (message.AdditionalData is not null
-                        && message.AdditionalData.TryGetValue("@removed", out object? removed))
-                    {
-                        if (matchingMessage is not null)
-                        {
-                            MailItems.Remove(matchingMessage);
-                            removedCount++;
-                        }
-
-                        continue;
-                    }
-
-                    // Sparse delta update: only changed properties, not a full message.
-                    // A full message always has ReceivedDateTime; sparse updates do not.
-                    if (message.ReceivedDateTime is null)
-                    {
-                        if (matchingMessage is not null)
-                        {
-                            if (message.IsRead is not null)
-                                matchingMessage.IsRead = (bool)message.IsRead;
-                            if (message.InferenceClassification is not null)
-                                matchingMessage.IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
-                            updatedCount++;
-                        }
-
-                        skippedSparseCount++;
-                        continue;
-                    }
-
-                    MailData newMail = new(message);
-
-                    if (message.OdataType == "#microsoft.graph.eventMessageRequest")
-                    {
-                        newMail.IsEvent = true;
-                    }
-
-                    if (message.HasAttachments is true)
-                    {
-                        try
-                        {
-                            AttachmentCollectionResponse? result = await _graphClient
-                                .Me.Messages[message.Id]
-                                .Attachments.GetAsync();
-
-                            if (result?.Value is not null)
-                            {
-                                newMail.AttachmentsCount = result.Value.Count;
-
-                                foreach (Attachment attachment in result.Value)
-                                {
-                                    if (attachment is FileAttachment fileAttachment)
-                                    {
-                                        newMail.Attachments.Add(new Models.AttachmentInfo
-                                        {
-                                            Id = fileAttachment.Id ?? string.Empty,
-                                            Name = fileAttachment.Name ?? string.Empty,
-                                            ContentType = fileAttachment.ContentType ?? string.Empty,
-                                        });
-                                        Debug.WriteLine("File attachment found: " + fileAttachment.Name);
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"[Sync] Failed to fetch attachments for message {message.Id}: {ex.Message}");
-                        }
-                    }
-
-                    if (MailItems.Count == 0)
-                    {
-                        MailItems.Add(newMail);
-                        addedCount++;
-                        continue;
-                    }
-
-                    if (matchingMessage is not null)
-                    {
-                        if (message.IsRead is not null)
-                            matchingMessage.IsRead = message.IsRead.Value;
-                        if (message.InferenceClassification is not null)
-                            matchingMessage.IsFocused = message.InferenceClassification != InferenceClassificationType.Other;
-                        updatedCount++;
-                        continue;
-                    }
-
-                    bool insertedMail = false;
-                    for (int i = 0; i < MailItems.Count; i++)
-                    {
-                        if (MailItems[i].ReceivedDateTime < message.ReceivedDateTime)
-                        {
-                            MailItems.Insert(i, newMail);
-                            insertedMail = true;
-                            break;
-                        }
-                    }
-
-                    if (!insertedMail)
-                        MailItems.Add(newMail);
-
-                    addedCount++;
-                }
-
-                Debug.WriteLine($"[Sync] Page {pageNumber} processed: added={addedCount}, updated={updatedCount}, removed={removedCount}, sparseSkipped={skippedSparseCount}");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Page {pageNumber} done: +{addedCount} ~{updatedCount} -{removedCount} sparse={skippedSparseCount}\n");
-
-                if (currentPage.OdataNextLink is not null)
-                {
-                    Debug.WriteLine($"[Sync] Fetching next page {pageNumber + 1}...");
-                    try
-                    {
-                        currentPage = await new DeltaRequestBuilder(currentPage.OdataNextLink, _graphClient.RequestAdapter).GetAsDeltaGetResponseAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[Sync] Failed to fetch page {pageNumber + 1}: {ex.Message}");
-                        DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Failed to fetch page {pageNumber + 1}: {ex.Message}\n");
-                        break;
-                    }
-                }
-                else
-                {
-                    Debug.WriteLine($"[Sync] No more pages after page {pageNumber}. HasDeltaLink={currentPage.OdataDeltaLink is not null}");
-                    DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: No more pages after page {pageNumber}\n");
-                    break;
-                }
-            }
-            while (currentPage is not null);
-
-            Debug.WriteLine($"[Sync] Pagination complete after {pageNumber} pages. Total MailItems={MailItems.Count}. HasDeltaLink={currentPage?.OdataDeltaLink is not null}");
-            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Done {pageNumber} pages, {MailItems.Count} total items, deltaLink={currentPage?.OdataDeltaLink is not null}\n");
-
-            if (currentPage?.OdataDeltaLink is not null)
-            {
-                deltaLink = currentPage.OdataDeltaLink;
-                await MailCacheService.SaveDeltaLink(deltaLink);
-                await MailCacheService.SaveEmailsAsync(MailItems);
-            }
-            else
-            {
-                Debug.WriteLine("[Sync] WARNING: No delta link received — next sync will do a full re-fetch.");
-                DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: WARNING no delta link received\n");
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Sync] Mail sync failed: {ex.Message}");
-        }
-        finally
-        {
-            isSyncingMail = false;
-            LastSync = DateTime.Now;
-            UpdateItems();
-            RebuildConversationGroups();
-            DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Mail synced\n");
-        }
+        await _syncEngine.SyncAsync(
+            new GraphMailSyncClient(_graphClient),
+            MailItems,
+            mailWindowMonths,
+            DateTimeOffset.UtcNow,
+            OnSyncChangedMail,
+            cancellationToken);
     }
 
-    private async Task CheckForOlderMailAsync()
+    private async Task CheckForOlderMailAsync(CancellationToken cancellationToken)
     {
-        if (_graphClient is null || !HasInternet || isSigningOut)
+        if (_graphClient is null || isSigningOut)
             return;
 
-        DateTime cutoff = DateTime.UtcNow.AddMonths(-mailWindowMonths);
-        string isoDate = cutoff.ToString("yyyy-MM-ddTHH:mm:ss") + "Z";
-        try
+        // Graph lists at most this many messages for a filtered delta, so a
+        // wider window could not show any more mail and the offer would do nothing.
+        if (MailItems.Count >= MailSyncPolicy.ServerEnumerationLimit)
         {
-            MessageCollectionResponse? resp = await _graphClient.Me.MailFolders["Inbox"].Messages.GetAsync(config =>
-            {
-                config.QueryParameters.Filter = $"receivedDateTime lt {isoDate}";
-                config.QueryParameters.Top = 1;
-                config.QueryParameters.Select = ["id"];
-            });
-            HasOlderMail = resp?.Value?.Count > 0;
+            HasOlderMail = false;
+            _lastOlderMailCheck = DateTime.UtcNow;
+            return;
         }
-        catch { }
+
+        DateTimeOffset cutoff = MailSyncPolicy.GetCutoff(DateTimeOffset.UtcNow, mailWindowMonths);
+        MessageCollectionResponse? resp = await _graphClient.Me.MailFolders["Inbox"].Messages.GetAsync(config =>
+        {
+            config.QueryParameters.Filter = MailSyncPolicy.ReceivedBefore(cutoff);
+            config.QueryParameters.Top = 1;
+            config.QueryParameters.Select = ["id"];
+        }, cancellationToken: cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (resp?.Value is null)
+            throw new InvalidDataException("Graph returned no history collection.");
+        HasOlderMail = resp.Value.Count > 0;
+        _lastOlderMailCheck = DateTime.UtcNow;
     }
 
     [RelayCommand]
     private async Task LoadMoreMonths()
     {
-        if (IsLoadingContent || _graphClient is null)
+        if (_graphClient is null)
             return;
 
-        mailWindowMonths++;
-        await MailCacheService.SaveMailWindowMonthsAsync(mailWindowMonths);
-
-        deltaLink = null;
-        await MailCacheService.SaveDeltaLink(null);
-
-        IsLoadingContent = true;
-        await SyncMail();
-        await CheckForOlderMailAsync();
-        IsLoadingContent = false;
-        await MailCacheService.SaveEmailsAsync(MailItems);
+        // A running pass would otherwise make this click do nothing. Canceling loses no work.
+        await CancelPendingSyncAsync();
+        await RunBackgroundSyncAsync(extendHistory: true);
     }
 
-    private async Task GetEvents()
+    private async Task GetEvents(CancellationToken cancellationToken)
     {
         DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Getting Events\n");
         if (isSigningOut
-            || !HasInternet
             || _graphClient is null)
         {
             DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Graph client is null {_graphClient is null} caused return\n");
@@ -912,41 +878,50 @@ public partial class ListDetailsViewModel : ObservableRecipient, INavigationAwar
         DateTime now = DateTime.UtcNow;
         DateTime endOfWeek = now.AddDays(2);
 
-        try
+        if (_mailboxTimeZone is null)
         {
-            // Get the user's mailbox settings to determine their time zone
             User? user = await _graphClient.Me.GetAsync(config =>
             {
-                config.QueryParameters.Select = ["mailboxSettings"];
-            });
-
-            string timeZone = user?.MailboxSettings?.TimeZone ?? "UTC";
-
-            EventCollectionResponse? eventsResponse = await _graphClient.Me.CalendarView.GetAsync(config =>
-            {
-                config.QueryParameters.StartDateTime = now.ToString("o");
-                config.QueryParameters.EndDateTime = endOfWeek.ToString("o");
-                config.QueryParameters.Orderby = ["start/dateTime"];
-                config.QueryParameters.Top = 4;
-                config.Headers.Add("Prefer", $"outlook.timezone=\"{timeZone}\"");
-            });
-
-            Events.Clear();
-
-            if (eventsResponse?.Value is not null)
-            {
-                foreach (Event ev in eventsResponse.Value)
-                    Events.Add(ev);
-            }
+                config.QueryParameters.Select = ["displayName", "mailboxSettings"];
+            }, cancellationToken: cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (user is null)
+                throw new InvalidDataException("Graph returned no mailbox profile.");
+            AccountName = user.DisplayName ?? string.Empty;
+            _mailboxTimeZone = user.MailboxSettings?.TimeZone ?? "UTC";
         }
-        catch (Exception)
+
+        EventCollectionResponse? eventsResponse = await _graphClient.Me.CalendarView.GetAsync(config =>
         {
-            return;
+            config.QueryParameters.StartDateTime = now.ToString("o");
+            config.QueryParameters.EndDateTime = endOfWeek.ToString("o");
+            config.QueryParameters.Orderby = ["start/dateTime"];
+            config.QueryParameters.Top = 4;
+            config.Headers.Add("Prefer", $"outlook.timezone=\"{_mailboxTimeZone}\"");
+        }, cancellationToken: cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (eventsResponse?.Value is null)
+            throw new InvalidDataException("Graph returned no calendar collection.");
+
+        if (Events.Count != eventsResponse.Value.Count
+            || !Events.Zip(eventsResponse.Value).All(pair => SameEvent(pair.First, pair.Second)))
+        {
+            Events.Clear();
+            foreach (Event ev in eventsResponse.Value)
+                Events.Add(ev);
         }
 
+        _lastEventsSync = DateTime.UtcNow;
         App.SetUpcomingEvents(Events);
         DebugText = DebugText.Insert(0, $"{DateTime.Now:t}: Events gotten\n");
     }
+
+    private static bool SameEvent(Event first, Event second) =>
+        first.Id == second.Id && first.Subject == second.Subject
+        && first.Start?.DateTime == second.Start?.DateTime && first.Start?.TimeZone == second.Start?.TimeZone
+        && first.End?.DateTime == second.End?.DateTime && first.End?.TimeZone == second.End?.TimeZone
+        && first.IsAllDay == second.IsAllDay && first.IsOnlineMeeting == second.IsOnlineMeeting
+        && first.OnlineMeetingUrl == second.OnlineMeetingUrl && first.WebLink == second.WebLink;
 
     public void OnNavigatedFrom()
     {

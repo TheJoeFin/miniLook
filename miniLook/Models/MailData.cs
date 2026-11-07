@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Humanizer;
 using Microsoft.Graph.Models;
 using System.Text.Json.Serialization;
@@ -7,10 +7,17 @@ namespace miniLook.Models;
 
 public partial class MailData : ObservableObject, IJsonOnDeserialized
 {
+    private bool _isRead;
+
     public string Id { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    public bool isRead = false;
+    // Written by hand on purpose: MailCacheJsonContext's source generator cannot see properties
+    // emitted by the MVVM generator, so an [ObservableProperty] here is silently left out of the cache.
+    public bool IsRead
+    {
+        get => _isRead;
+        set => SetProperty(ref _isRead, value);
+    }
 
     public string ConversationId { get; set; } = string.Empty;
 
@@ -44,7 +51,10 @@ public partial class MailData : ObservableObject, IJsonOnDeserialized
 
     public int AttachmentsCount { get; set; } = 0;
 
-    public bool HasAttachments => AttachmentsCount > 0;
+    /// <summary>Graph says this message has attachments, and their listing has not been fetched yet.</summary>
+    public bool AttachmentsPending { get; set; } = false;
+
+    public bool HasAttachments => AttachmentsCount > 0 || AttachmentsPending;
 
     public List<AttachmentInfo> Attachments { get; set; } = [];
 
@@ -60,7 +70,7 @@ public partial class MailData : ObservableObject, IJsonOnDeserialized
 
     public MailData()
     {
-        
+
     }
 
     public MailData(Message message)
@@ -83,6 +93,8 @@ public partial class MailData : ObservableObject, IJsonOnDeserialized
         Body = message.BodyPreview ?? string.Empty;
 
         HasHtmlBody = !string.IsNullOrEmpty(message.BodyPreview);
+        IsEvent = message.OdataType == "#microsoft.graph.eventMessageRequest";
+        AttachmentsPending = message.HasAttachments is true;
     }
 
     public void OnDeserialized()
@@ -102,6 +114,134 @@ public partial class MailData : ObservableObject, IJsonOnDeserialized
             SenderName = Sender;
             SenderAddress = Sender;
         }
+    }
+
+    public MailData CreateCacheSnapshot() => new()
+    {
+        Id = Id,
+        IsRead = IsRead,
+        ConversationId = ConversationId,
+        Sender = Sender,
+        SenderName = SenderName,
+        SenderAddress = SenderAddress,
+        ToRecipientsFull = ToRecipientsFull,
+        CcRecipientsFull = CcRecipientsFull,
+        HasToRecipients = HasToRecipients,
+        HasCcRecipients = HasCcRecipients,
+        Subject = Subject,
+        Body = Body,
+        HasHtmlBody = HasHtmlBody,
+        WebLink = WebLink,
+        IsFocused = IsFocused,
+        IsEvent = IsEvent,
+        AttachmentsCount = AttachmentsCount,
+        AttachmentsPending = AttachmentsPending,
+        ReceivedDateTime = ReceivedDateTime,
+        Attachments = Attachments.Select(a => new AttachmentInfo
+        {
+            Id = a.Id,
+            Name = a.Name,
+            ContentType = a.ContentType
+        }).ToList()
+    };
+
+    public bool UpdateMetadata(MailData updated, bool? hasAttachments)
+    {
+        bool changed = IsRead != updated.IsRead || IsFocused != updated.IsFocused;
+        bool metadataChanged = Subject != updated.Subject || Sender != updated.Sender || ReceivedDateTime != updated.ReceivedDateTime
+            || Body != updated.Body || WebLink != updated.WebLink || ConversationId != updated.ConversationId
+            || ToRecipientsFull != updated.ToRecipientsFull || CcRecipientsFull != updated.CcRecipientsFull
+            || IsEvent != updated.IsEvent || HasHtmlBody != updated.HasHtmlBody
+            || HasToRecipients != updated.HasToRecipients || HasCcRecipients != updated.HasCcRecipients;
+        IsRead = updated.IsRead;
+        IsFocused = updated.IsFocused;
+        if (metadataChanged)
+        {
+            Subject = updated.Subject;
+            Sender = updated.Sender;
+            SenderName = updated.SenderName;
+            SenderAddress = updated.SenderAddress;
+            ReceivedDateTime = updated.ReceivedDateTime;
+            Body = updated.Body;
+            HasHtmlBody = updated.HasHtmlBody;
+            WebLink = updated.WebLink;
+            ConversationId = updated.ConversationId;
+            ToRecipientsFull = updated.ToRecipientsFull;
+            CcRecipientsFull = updated.CcRecipientsFull;
+            HasToRecipients = updated.HasToRecipients;
+            HasCcRecipients = updated.HasCcRecipients;
+            IsEvent = updated.IsEvent;
+            foreach (string property in new[]
+            {
+                    nameof(Subject), nameof(Sender), nameof(SenderName), nameof(SenderAddress), nameof(SenderDisplayName),
+                    nameof(ReceivedDateTime), nameof(RelativeReceivedDateTime), nameof(FormattedReceivedDateTime),
+                    nameof(Body), nameof(HasHtmlBody), nameof(WebLink), nameof(ToRecipientsFull), nameof(CcRecipientsFull),
+                    nameof(HasToRecipients), nameof(HasCcRecipients), nameof(IsEvent)
+                })
+                OnPropertyChanged(property);
+        }
+        if (hasAttachments == false && HasAttachments)
+        {
+            SetAttachments([], 0);
+            changed = true;
+        }
+        else if (hasAttachments == true && !HasAttachments)
+        {
+            AttachmentsPending = true;
+            OnPropertyChanged(nameof(HasAttachments));
+            changed = true;
+        }
+        return changed || metadataChanged;
+    }
+
+    public void SetAttachments(List<AttachmentInfo> attachments, int totalCount)
+    {
+        Attachments = attachments;
+        AttachmentsCount = totalCount;
+        AttachmentsPending = false;
+        OnPropertyChanged(nameof(Attachments));
+        OnPropertyChanged(nameof(AttachmentsCount));
+        OnPropertyChanged(nameof(HasAttachments));
+    }
+
+    public bool ApplyDelta(Message message)
+    {
+        MailData updated = new(message);
+        if (!message.IsRead.HasValue)
+            updated.IsRead = IsRead;
+        if (!message.InferenceClassification.HasValue)
+            updated.IsFocused = IsFocused;
+        if (message.Sender is null)
+        {
+            updated.Sender = Sender;
+            updated.SenderName = SenderName;
+            updated.SenderAddress = SenderAddress;
+        }
+        if (message.Subject is null)
+            updated.Subject = Subject;
+        if (message.BodyPreview is null)
+        {
+            updated.Body = Body;
+            updated.HasHtmlBody = HasHtmlBody;
+        }
+        if (message.WebLink is null)
+            updated.WebLink = WebLink;
+        if (message.ConversationId is null)
+            updated.ConversationId = ConversationId;
+        if (!message.ReceivedDateTime.HasValue)
+            updated.ReceivedDateTime = ReceivedDateTime;
+        if (message.ToRecipients is null)
+        {
+            updated.ToRecipientsFull = ToRecipientsFull;
+            updated.HasToRecipients = HasToRecipients;
+        }
+        if (message.CcRecipients is null)
+        {
+            updated.CcRecipientsFull = CcRecipientsFull;
+            updated.HasCcRecipients = HasCcRecipients;
+        }
+        updated.IsEvent = message.OdataType is null ? IsEvent : message.OdataType == "#microsoft.graph.eventMessageRequest";
+        return UpdateMetadata(updated, message.HasAttachments);
     }
 
     private static (string Short, string Full) BuildRecipientDisplay(List<Recipient>? recipients)

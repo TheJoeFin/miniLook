@@ -9,5 +9,5 @@ public class AttachmentInfo
     public string ContentType { get; set; } = string.Empty;
 
     [JsonIgnore]
-    public byte[]? ContentBytes { get; set; }
+    public string? LocalFilePath { get; set; }
 }

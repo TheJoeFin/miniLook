@@ -1,4 +1,5 @@
 ﻿using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
 
 using miniLook.ViewModels;
 
@@ -16,5 +17,15 @@ public sealed partial class SettingsPage : Page
     {
         ViewModel = App.GetService<SettingsViewModel>();
         InitializeComponent();
+    }
+
+    private async void BackgroundUpdatesToggle_Toggled(object sender, RoutedEventArgs args)
+    {
+        if (sender is ToggleSwitch toggle)
+        {
+            toggle.IsEnabled = false;
+            await ViewModel.SetBackgroundTrayUpdatesAsync(toggle.IsOn);
+            toggle.IsEnabled = true;
+        }
     }
 }

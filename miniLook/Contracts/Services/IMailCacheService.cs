@@ -11,7 +11,7 @@ public interface IMailCacheService
 
     Task<IEnumerable<MailData>> GetEmailsAsync();
 
-    Task SaveEmailsAsync(IEnumerable<MailData> allMailData);
+    Task SaveEmailsAsync(IEnumerable<MailData> allMailData, CancellationToken cancellationToken = default);
 
     Task ClearMailCacheAsync();
 

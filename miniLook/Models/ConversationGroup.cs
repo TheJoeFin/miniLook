@@ -32,12 +32,19 @@ public partial class ConversationGroup : ObservableObject
     public bool HasMultipleMessages => Messages.Count > 1;
 
     public bool IsFocused => LatestMessage.IsFocused;
+    private Summary _lastSummary;
+
+    private readonly record struct Summary(MailData Latest, string Subject, string Sender, DateTimeOffset Received,
+        bool Attachments, bool Event, int Count, bool Focused);
+
+    private Summary GetSummary() => new(LatestMessage, Subject, Sender, ReceivedDateTime, HasAttachments, IsEvent, MessageCount, IsFocused);
 
     public ConversationGroup(string conversationId, IEnumerable<MailData> messages)
     {
         ConversationId = conversationId;
         foreach (MailData? msg in messages.OrderByDescending(m => m.ReceivedDateTime))
             Messages.Add(msg);
+        _lastSummary = GetSummary();
     }
 
     public void SyncMessages(List<MailData> updatedMessages)
@@ -54,6 +61,8 @@ public partial class ConversationGroup : ObservableObject
         // Add new messages and ensure correct order
         for (int i = 0; i < updatedMessages.Count; i++)
         {
+            if (i < Messages.Count && ReferenceEquals(Messages[i], updatedMessages[i]))
+                continue;
             int currentIndex = -1;
             for (int j = 0; j < Messages.Count; j++)
             {
@@ -70,14 +79,27 @@ public partial class ConversationGroup : ObservableObject
                 Messages.Move(currentIndex, i);
         }
 
-        OnPropertyChanged(nameof(LatestMessage));
-        OnPropertyChanged(nameof(Subject));
-        OnPropertyChanged(nameof(Sender));
-        OnPropertyChanged(nameof(ReceivedDateTime));
-        OnPropertyChanged(nameof(HasAttachments));
-        OnPropertyChanged(nameof(IsEvent));
-        OnPropertyChanged(nameof(MessageCount));
-        OnPropertyChanged(nameof(HasMultipleMessages));
-        OnPropertyChanged(nameof(IsFocused));
+        Summary current = GetSummary();
+        if (!ReferenceEquals(current.Latest, _lastSummary.Latest))
+            OnPropertyChanged(nameof(LatestMessage));
+        if (current.Subject != _lastSummary.Subject)
+            OnPropertyChanged(nameof(Subject));
+        if (current.Sender != _lastSummary.Sender)
+            OnPropertyChanged(nameof(Sender));
+        if (current.Received != _lastSummary.Received)
+            OnPropertyChanged(nameof(ReceivedDateTime));
+        if (current.Attachments != _lastSummary.Attachments)
+            OnPropertyChanged(nameof(HasAttachments));
+        if (current.Event != _lastSummary.Event)
+            OnPropertyChanged(nameof(IsEvent));
+        if (current.Count != _lastSummary.Count)
+        {
+            OnPropertyChanged(nameof(MessageCount));
+            if ((current.Count > 1) != (_lastSummary.Count > 1))
+                OnPropertyChanged(nameof(HasMultipleMessages));
+        }
+        if (current.Focused != _lastSummary.Focused)
+            OnPropertyChanged(nameof(IsFocused));
+        _lastSummary = current;
     }
 }
