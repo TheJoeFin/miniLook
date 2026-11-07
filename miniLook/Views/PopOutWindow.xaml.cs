@@ -1,5 +1,7 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Windowing;
+using miniLook.Helpers;
 using miniLook.Contracts.Services;
 using miniLook.ViewModels;
 using Windows.UI;
@@ -12,6 +14,7 @@ public sealed partial class PopOutWindow : WindowEx
     private Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue;
     private readonly UISettings settings;
     private bool _initialized = false;
+    private bool _isClosed;
 
     public PopOutWindow()
     {
@@ -27,8 +30,30 @@ public sealed partial class PopOutWindow : WindowEx
         settings.ColorValuesChanged += Settings_ColorValuesChanged;
 
         Activated += PopOutWindow_Activated;
+        AppWindow.Changed += OnWindowChanged;
+        Closed += OnClosed;
 
         UpdateCaptionButtonColors();
+    }
+
+    private void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs args) => App.NotifyWindowVisibilityChanged();
+
+    private void OnClosed(object sender, WindowEventArgs args)
+    {
+        _isClosed = true;
+        settings.ColorValuesChanged -= Settings_ColorValuesChanged;
+        Activated -= PopOutWindow_Activated;
+        AppWindow.Changed -= OnWindowChanged;
+        if (ContentFrame.GetPageViewModel() is miniLook.Contracts.ViewModels.INavigationAware page)
+            page.OnNavigatedFrom();
+        INavigationService navigation = App.GetService<INavigationService>();
+        if (ReferenceEquals(navigation.Frame, ContentFrame))
+            navigation.Frame = null;
+        ContentFrame.Content = null;
+        ContentFrame.BackStack.Clear();
+        if (ReferenceEquals(App.PopOutWindow, this))
+            App.PopOutWindow = null;
+        App.NotifyWindowVisibilityChanged();
     }
 
     private void PopOutWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -48,7 +73,11 @@ public sealed partial class PopOutWindow : WindowEx
 
     private void Settings_ColorValuesChanged(UISettings sender, object args)
     {
-        dispatcherQueue.TryEnqueue(UpdateCaptionButtonColors);
+        dispatcherQueue.TryEnqueue(() =>
+        {
+            if (!_isClosed)
+                UpdateCaptionButtonColors();
+        });
     }
 
     private void UpdateCaptionButtonColors()

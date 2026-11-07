@@ -16,6 +16,7 @@ namespace miniLook.ViewModels;
 // https://docs.microsoft.com/microsoft-edge/webview2/concepts/distribution
 public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAware
 {
+    private CancellationTokenSource? _renderCancellation;
     private MailData? passedMailData;
 
     // TODO: Set the default URL to display.
@@ -85,6 +86,12 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
 
     public async void OnNavigatedTo(object parameter)
     {
+        _renderCancellation?.Cancel();
+        _renderCancellation?.Dispose();
+        _renderCancellation = new();
+        CancellationToken cancellationToken = _renderCancellation.Token;
+        WebViewService.NavigationCompleted -= OnNavigationCompleted;
+        WebViewService.NavigationCompleted += OnNavigationCompleted;
         if (parameter is MailData mailData)
         {
             passedMailData = mailData;
@@ -96,20 +103,32 @@ public partial class RenderWebViewViewModel : ObservableRecipient, INavigationAw
                     Message? message = await GraphService.Client.Me.Messages[mailData.Id].GetAsync(config =>
                     {
                         config.QueryParameters.Select = ["body"];
-                    });
+                    }, cancellationToken: cancellationToken);
 
                     if (message?.Body?.ContentType == BodyType.Html && !string.IsNullOrEmpty(message.Body.Content))
-                        WebViewService.GoToString(message.Body.Content);
+                        await WebViewService.GoToString(message.Body.Content, cancellationToken);
                 }
-                catch { }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    System.Diagnostics.Debug.WriteLine("[HTML] Rendering canceled after navigation.");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[HTML] Rendering failed: {ex.Message}");
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        HasFailures = true;
+                        IsLoading = false;
+                    }
+                }
             }
         }
 
-        WebViewService.NavigationCompleted += OnNavigationCompleted;
     }
 
     public void OnNavigatedFrom()
     {
+        _renderCancellation?.Cancel();
         WebViewService.UnregisterEvents();
         WebViewService.NavigationCompleted -= OnNavigationCompleted;
     }

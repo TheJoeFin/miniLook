@@ -1,5 +1,6 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Windowing;
 using miniLook.Models;
 using Windows.UI;
 using Windows.UI.ViewManagement;
@@ -10,9 +11,12 @@ public sealed partial class MailItemWindow : WindowEx
 {
     private Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue;
     private readonly UISettings settings;
+    private bool _isClosed;
+    private readonly string _mailId;
 
     public MailItemWindow(MailData mailData)
     {
+        _mailId = mailData.Id;
         InitializeComponent();
 
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets/mouseIcon.ico"));
@@ -26,13 +30,32 @@ public sealed partial class MailItemWindow : WindowEx
         dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         settings = new UISettings();
         settings.ColorValuesChanged += Settings_ColorValuesChanged;
+        AppWindow.Changed += OnWindowChanged;
+        Closed += OnClosed;
 
         UpdateCaptionButtonColors();
     }
 
+    private void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs args) => App.NotifyWindowVisibilityChanged();
+
+    private void OnClosed(object sender, WindowEventArgs args)
+    {
+        _isClosed = true;
+        settings.ColorValuesChanged -= Settings_ColorValuesChanged;
+        AppWindow.Changed -= OnWindowChanged;
+        DetailControl.ReleaseResources();
+        DetailControl.ListDetailsMenuItem = null;
+        App.MailItemWindows.Remove(_mailId);
+        App.NotifyWindowVisibilityChanged();
+    }
+
     private void Settings_ColorValuesChanged(UISettings sender, object args)
     {
-        dispatcherQueue.TryEnqueue(UpdateCaptionButtonColors);
+        dispatcherQueue.TryEnqueue(() =>
+        {
+            if (!_isClosed)
+                UpdateCaptionButtonColors();
+        });
     }
 
     private void UpdateCaptionButtonColors()

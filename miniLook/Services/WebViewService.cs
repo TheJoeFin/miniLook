@@ -31,6 +31,7 @@ public class WebViewService : IWebViewService
     [MemberNotNull(nameof(_webView))]
     public void Initialize(WebView2 webView)
     {
+        UnregisterEvents();
         _webView = webView;
         _webView.NavigationCompleted += OnWebViewNavigationCompleted;
     }
@@ -57,14 +58,19 @@ public class WebViewService : IWebViewService
 
     public void Reload() => _webView?.Reload();
 
-    public async Task GoToString(string htmlToRender)
+    public async Task GoToString(string htmlToRender, CancellationToken cancellationToken = default)
     {
         if (_webView is null)
-            return;
+            throw new InvalidOperationException("The browser view has not been initialized.");
 
-        await _webView.EnsureCoreWebView2Async();
-        _webView.NavigateToString(htmlToRender);
-        _webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+        WebView2 view = _webView;
+        await view.EnsureCoreWebView2Async();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!ReferenceEquals(view, _webView))
+            throw new OperationCanceledException("The browser view was released.", cancellationToken);
+        view.CoreWebView2.NewWindowRequested -= CoreWebView2_NewWindowRequested;
+        view.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+        view.NavigateToString(htmlToRender);
     }
 
     public void UnregisterEvents()
@@ -72,6 +78,10 @@ public class WebViewService : IWebViewService
         if (_webView != null)
         {
             _webView.NavigationCompleted -= OnWebViewNavigationCompleted;
+            if (_webView.CoreWebView2 is not null)
+                _webView.CoreWebView2.NewWindowRequested -= CoreWebView2_NewWindowRequested;
+            _webView.Close();
+            _webView = null;
         }
     }
 

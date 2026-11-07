@@ -32,7 +32,7 @@ public interface IWebViewService
 
     void Reload();
 
-    Task GoToString(string htmlToRender);
+    Task GoToString(string htmlToRender, CancellationToken cancellationToken = default);
 
     void UnregisterEvents();
 }

@@ -38,6 +38,8 @@ public sealed partial class ShellPage : Page
     public void OnClosed()
     {
         ViewModel.OnHidden();
+        if (NavigationFrame.GetPageViewModel() is miniLook.Contracts.ViewModels.INavigationAware page)
+            page.OnNavigatedFrom();
         if (ReferenceEquals(ViewModel.NavigationService.Frame, NavigationFrame))
             ViewModel.NavigationService.Frame = null;
         NavigationFrame.Content = null;
